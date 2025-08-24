@@ -15,6 +15,7 @@ import {
   Database,
   Rocket,
 } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 // Animation variants for Framer Motion
 const FADE_IN_STAGGER_VARIANTS = {
