@@ -1,177 +1,65 @@
-# Cursor Prompt — OmniSearch AI (Server_FastAPI only)
+# OmniSearch AI — Project Summary
 
-> **Context:**  
-> Project: **OmniSearch AI** — AI-powered orchestrator that ingests user files, enriches with web results, routes tasks to the right model via Ollama, and returns provenance-backed answers.  
-> Repo path to change:  
-> `Documents/GitHub/Kurushetra_2.0_Team_NeuralHacks/server_FastAPI`  
-> (Frontend will be handled separately, do **not** modify).
+**OmniSearch AI** is an AI-powered, multi-modal search and summarization system.  
+It ingests **user-provided files** (PDF, CSV, DOCX, images, etc.), combines them with **live web results**, routes tasks to the most appropriate **local or hosted LLMs via Ollama**, and produces **concise, provenance-backed answers**.
 
 ---
 
-## Task for Cursor
-You are to implement and extend **only the AI/backend logic** inside `server_FastAPI`.  
-Focus on ingestion, embeddings, vector search, reranking, model routing, summarization, and web enrichment.  
-Leave frontend code untouched.
+## Core Flow
+1. **User Input**: User uploads files + enters a natural language query.  
+2. **Ingestion & Indexing**: Files are parsed (PDF, CSV, image OCR), chunked, embedded, and stored in a **vector database**.  
+3. **Model Routing**: An orchestrator decides which model to use based on intent (e.g., code → Claude/local LLaMA, research → GPT/ChatGPT, factual short answers → Mistral). Routing uses a **deterministic table** with an LLM fallback.  
+4. **Retrieval + Web Enrichment**: Relevant chunks retrieved from the vector DB, combined with web search results (SerpAPI/Bing).  
+5. **Reranking**: Candidate results reranked using **Hugging Face cross-encoder** models for semantic relevance.  
+6. **Summarization**: Context passed into a summarizer (Ollama local model → LLaMA/Mistral, with OpenAI fallback).  
+   - Strict **RAG discipline**: Only provided snippets can be used.  
+   - Output always cites sources (`SRC_n`).  
+   - If insufficient evidence → returns `"INSUFFICIENT_EVIDENCE"`.  
+7. **Output**: API returns structured JSON containing:
+   - `answer` (summary or code if requested)  
+   - `confidence` score  
+   - `sources` (with quotes + provenance)  
+   - optional `code` block  
 
 ---
 
-## Deliverables
-1. **Model Router**  
-   - File: `app/config/model_routing.py`  
-   - Implement deterministic routing table: *intent → model profile*.  
-   - Add fallback LLM router using prompt (see `app/prompts/templates.py`).
-
-2. **Prompt Templates**  
-   - File: `app/prompts/templates.py`  
-   - Add 3 templates:
-     - Routing fallback (one-word intent).  
-     - Cross-encoder reranker (JSON output).  
-     - Final summarizer (STRICT JSON with `SRC_n`).  
-
-3. **Endpoints**  
-   - `app/api/v1/uploads.py`: Upload + enqueue indexing job.  
-   - `app/api/v1/search.py`: Orchestrate embeddings, vector DB search, web fetch, reranker, final summarizer.  
-   - `app/api/v1/files.py`: File/page fetch for provenance.
-
-4. **Services**  
-   Implement AI-related service stubs under `app/services/`:  
-   - `model_router.py`  
-   - `embeddings.py`  
-   - `vectordb.py`  
-   - `reranker.py`  
-   - `summarizer.py`  
-   - `web_search.py`  
-   - `ingest.py`  
-   - `storage.py`  
-
-5. **Docs & Tests**  
-   - `docs/API_DOCS.md`: Document `/upload`, `/search`, `/status/{file_id}`, `/file/{file_id}/page/{p}`.  
-   - Tests under `tests/`:  
-     - `tests/test_router.py`  
-     - `tests/test_search_shape.py`.
+## Features
+- 🔍 **Multi-modal ingestion**: PDF, CSV, text, images.  
+- ⚡ **Hybrid retrieval**: Vector DB + live web search.  
+- 🧠 **Smart routing**: Model chosen based on intent (coding, research, factual QA, summarization).  
+- 📑 **Provenance enforcement**: Every answer cites document pages or URLs.  
+- 🤝 **Summarized + actionable output**: Users get concise answers, code snippets, or structured summaries.  
+- 🛠️ **Extensible**: Modular backend services (embeddings, reranker, summarizer, router, web search).  
+- 🌐 **Web-first API**: Built on FastAPI with documented endpoints.
 
 ---
 
-## Env Vars (`.env.example`)
-```env
-S3_ENDPOINT=<<<CURSOR>>>
-S3_ACCESS_KEY=<<<CURSOR>>>
-S3_SECRET_KEY=<<<CURSOR>>>
-S3_BUCKET=omnisea-uploads
+## Tech Stack
+- **Frontend**: React (separate repo, not modified here).  
+- **Backend**: FastAPI, Redis + RQ (tasks), FAISS/Pinecone (vector DB).  
+- **AI Models**:
+  - Embeddings: `sentence-transformers/all-mpnet-base-v2` (MiniLM fallback).  
+  - Reranker: Hugging Face `cross-encoder/ms-marco-MiniLM-L-6-v2`.  
+  - Summarization/QA: Local Ollama models (`mistral`, `r1`, quantized LLaMA) + optional OpenAI fallback.  
+- **Web Search**: SerpAPI / Bing API.  
+- **Storage**: S3/MinIO for file persistence.  
 
-REDIS_URL=redis://localhost:6379/0
+---
 
-VECTOR_DB_TYPE=faiss
-HUGGINGFACE_API_TOKEN=<<<CURSOR>>>
-OPENAI_API_KEY=<<<CURSOR>>>
-OLLAMA_HOST=http://localhost:11434
-LLAMA_LOCAL_PATH=<<<CURSOR>>>
+## Business Model
+- **Free tier**: Limited file size, capped queries/day, uses smaller local models.  
+- **Pro tier (subscription)**: Higher limits, faster responses, larger context, premium models (Claude, GPT-4).  
+- **Enterprise tier**: Private deployments, team-based workspaces, compliance features (SOC2, HIPAA-ready).  
 
-AUTH_PUBLIC_KEY_URL=<<<CURSOR>>>
+---
 
-Acceptance Criteria
+## Value Proposition
+- **Researchers**: Search across papers, data, and web at once.  
+- **Developers**: Get contextualized code snippets + references.  
+- **Businesses**: Unified knowledge retrieval across docs, reports, and web sources.  
+- **Education**: Students summarize and learn from diverse formats with sources cited.
 
-Endpoints require Bearer token; unauthorized → 401.
+---
 
-POST /api/v1/upload returns:
-
-{"file_id":"<uuid>", "filename":"<name>", "status":"uploaded", "message":"Indexing queued"}
-
-
-POST /api/v1/search returns:
-
-{
-  "answer": "<string or INSUFFICIENT_EVIDENCE>",
-  "confidence": 0.0-1.0,
-  "sources": [{"file_id","filename","page","snippet","score","url?"}],
-  "raw_chunks": [{"id","text","score"}]
-}
-
-
-Final answers must cite SRC_n inline.
-
-API docs at /docs + static docs/API_DOCS.md.
-
-Unit tests must pass.
-
-Prompts (to paste in app/prompts/templates.py)
-Routing Fallback
-You are a lightweight router that selects the most appropriate model intent.
-Intents: code_generation, research_longform, factual_short_answer, table_query, image_analysis, summarize.
-
-Task: {task_description}
-
-Rules:
-- Reply with only the chosen intent key.
-- If ambiguous, choose 'research_longform'.
-
-Reranker
-You are a relevance scorer. Score snippets 0–100 by query match.
-
-Query:
-{query}
-
-Snippets:
-[SNIP_1] id:{id1}
-{text1}
-...
-
-Return JSON:
-[
-  {"id":"id1","score":87,"justification":"matches keywords"},
-  ...
-]
-
-Final Summarizer
-
-You are an evidence-based summarizer. Use ONLY provided sources.
-
-User query:
-{user_query}
-
-Sources:
-{sources_block}
-
-Rules:
-1. Concise answer (2–6 sentences).
-2. Cite sources [SRC_n].
-3. Confidence 0.0–1.0.
-4. Sources list with src_id, quote, url_or_file.
-5. Include code only if requested.
-6. If insufficient → {"answer":"INSUFFICIENT_EVIDENCE","confidence":0.0,"sources":[]}
-
-Return JSON only:
-{
-  "answer":"...",
-  "confidence":0.8,
-  "sources":[{"src_id":"SRC_1","quote":"...","url_or_file":"..."}],
-  "code":{"language":"python","content":"..."} // optional
-}
-Demo Script
-Start FastAPI:
-
-bash
-Copy
-Edit
-uvicorn app.main:app --reload --port 8000
-Start Redis + worker:
-
-bash
-Copy
-Edit
-rq worker --url redis://localhost:6379 default
-Upload sample PDF:
-
-curl -X POST "http://localhost:8000/api/v1/upload" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -F "workspace_id=demo" \
-  -F "file=@sample_data/sample.pdf"
-Run search:
-
-bash
-Copy
-Edit
-curl -X POST "http://localhost:8000/api/v1/search" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"workspace_id":"demo","query":"Summarize methods used","top_k":10,"include_web":true}'
+## Vision
+A **universal AI research assistant** that combines local efficiency (via Ollama), scalable vector search, and multi-source summarization into a single API-driven product.
