@@ -8,6 +8,7 @@ import {
     statusType,
     sendResponse
 } from "../../utils/index.js";
+import { verifyGoogleToken } from "../../utils/googleAuth.js";
 
 // Token generator functions
 const generateAccessToken = (user) => {
@@ -39,10 +40,12 @@ const cookieOptions = {
 export const createUser = asyncHandler(async (req, res) => {
     const { name, email, password, date_of_birth, image, googleToken } = req.body;
     // Google Auth Flow
+    console.log("hihfei");
+
     if (googleToken) {
         try {
+            console.log("hihfei");
             const googleUser = await verifyGoogleToken(googleToken);
-
             let user = await User.findOne({
                 $or: [{ email: googleUser.email }, { googleId: googleUser.sub }]
             });
