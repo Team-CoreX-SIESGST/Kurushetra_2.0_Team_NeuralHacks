@@ -1,6 +1,6 @@
 """
 Files API endpoint for OmniSearch AI.
-Handles file retrieval and page access for provenance.
+Simplified Gemini-only file management implementation.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -8,11 +8,13 @@ from fastapi.responses import JSONResponse, FileResponse
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import os
-from app.services.storage import StorageService
-from app.services.vectordb import VectorDBService
+import json
 from app.middlewares.auth import verify_token
 
 router = APIRouter(prefix="/api/v1", tags=["files"])
+
+# Local storage path
+UPLOAD_DIR = "data/uploads"
 
 @router.get("/file/{file_id}")
 async def get_file_info(
@@ -22,28 +24,48 @@ async def get_file_info(
 ):
     """
     Get file information and metadata.
-    
-    Args:
-        file_id: File identifier
-        workspace_id: Workspace identifier
-        current_user: Authenticated user
-    
-    Returns:
-        JSON response with file information
     """
     try:
-        # Initialize services
-        storage_service = StorageService()
+        # Look for file in workspace directory
+        workspace_dir = os.path.join(UPLOAD_DIR, workspace_id)
+        file_path = None
+        metadata_path = None
         
-        # Try to get file info (assuming PDF for now)
-        file_info = await storage_service.retrieve_file(
-            file_id,
-            workspace_id,
-            f"{file_id}.pdf"
-        )
+        if os.path.exists(workspace_dir):
+            for filename in os.listdir(workspace_dir):
+                if filename.startswith(file_id):
+                    if filename.endswith('_metadata.json'):
+                        metadata_path = os.path.join(workspace_dir, filename)
+                    else:
+                        file_path = os.path.join(workspace_dir, filename)
         
-        if not file_info:
+        if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")
+        
+        # Get file info
+        file_size = os.path.getsize(file_path)
+        upload_time = datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
+        
+        # Try to get metadata
+        metadata = {}
+        if metadata_path and os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+            except:
+                pass
+        
+        file_info = {
+            "file_id": file_id,
+            "filename": os.path.basename(file_path).replace(f"{file_id}_", "", 1),
+            "workspace_id": workspace_id,
+            "status": "stored",
+            "storage_path": file_path,
+            "storage_type": "local",
+            "file_size": file_size,
+            "upload_time": upload_time,
+            **metadata
+        }
         
         return JSONResponse(
             status_code=200,
@@ -64,164 +86,6 @@ async def get_file_info(
             detail=f"File info retrieval failed: {str(e)}"
         )
 
-@router.get("/file/{file_id}/page/{page_number}")
-async def get_file_page(
-    file_id: str,
-    page_number: int,
-    workspace_id: str,
-    current_user: dict = Depends(verify_token)
-):
-    """
-    Get specific page content from a file.
-    
-    Args:
-        file_id: File identifier
-        page_number: Page number (1-based)
-        workspace_id: Workspace identifier
-        current_user: Authenticated user
-    
-    Returns:
-        JSON response with page content
-    """
-    try:
-        if page_number < 1:
-            raise HTTPException(status_code=400, detail="Page number must be 1 or greater")
-        
-        # Initialize services
-        vector_db = VectorDBService(workspace_id)
-        await vector_db.initialize()
-        
-        # Search for chunks from the specific page
-        # This is a simplified approach - in production, you might want to store page metadata
-        search_results = vector_db.search(
-            query_vector=None,  # We'll filter by metadata instead
-            top_k=100  # Get more results to find the page
-        )
-        
-        # Filter results by page number
-        page_chunks = []
-        for result in search_results:
-            if result.get('file_id') == file_id and result.get('page') == page_number:
-                page_chunks.append({
-                    "chunk_id": result.get('id', result.get('vector_id', '')),
-                    "text": result.get('text', ''),
-                    "chunk_index": result.get('chunk_index', 0),
-                    "start_char": result.get('start_char', 0),
-                    "end_char": result.get('end_char', 0)
-                })
-        
-        if not page_chunks:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Page {page_number} not found in file {file_id}"
-            )
-        
-        # Sort chunks by chunk_index to maintain order
-        page_chunks.sort(key=lambda x: x.get('chunk_index', 0))
-        
-        # Combine text from all chunks on the page
-        page_text = ""
-        for chunk in page_chunks:
-            page_text += chunk['text'] + "\n"
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "file_id": file_id,
-                "workspace_id": workspace_id,
-                "page_number": page_number,
-                "page_content": page_text.strip(),
-                "chunks": page_chunks,
-                "total_chunks": len(page_chunks),
-                "retrieved_at": datetime.now().isoformat()
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Page retrieval failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Page retrieval failed: {str(e)}"
-        )
-
-@router.get("/file/{file_id}/chunks")
-async def get_file_chunks(
-    file_id: str,
-    workspace_id: str,
-    page: Optional[int] = Query(None, description="Filter by page number"),
-    limit: int = Query(50, description="Maximum number of chunks to return"),
-    current_user: dict = Depends(verify_token)
-):
-    """
-    Get chunks from a file, optionally filtered by page.
-    
-    Args:
-        file_id: File identifier
-        workspace_id: Workspace identifier
-        page: Optional page number filter
-        limit: Maximum number of chunks to return
-        current_user: Authenticated user
-    
-    Returns:
-        JSON response with file chunks
-    """
-    try:
-        # Initialize services
-        vector_db = VectorDBService(workspace_id)
-        await vector_db.initialize()
-        
-        # Get all chunks for the file
-        search_results = vector_db.search(
-            query_vector=None,  # We'll filter by metadata instead
-            top_k=1000  # Get more results to find all chunks
-        )
-        
-        # Filter results by file_id and optionally by page
-        file_chunks = []
-        for result in search_results:
-            if result.get('file_id') == file_id:
-                if page is None or result.get('page') == page:
-                    chunk = {
-                        "chunk_id": result.get('id', result.get('vector_id', '')),
-                        "text": result.get('text', ''),
-                        "page": result.get('page', 1),
-                        "chunk_index": result.get('chunk_index', 0),
-                        "start_char": result.get('start_char', 0),
-                        "end_char": result.get('end_char', 0),
-                        "score": result.get('score', 0),
-                        "timestamp": result.get('timestamp', '')
-                    }
-                    file_chunks.append(chunk)
-        
-        # Sort chunks by page and chunk_index
-        file_chunks.sort(key=lambda x: (x.get('page', 1), x.get('chunk_index', 0)))
-        
-        # Apply limit
-        if limit > 0:
-            file_chunks = file_chunks[:limit]
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "file_id": file_id,
-                "workspace_id": workspace_id,
-                "chunks": file_chunks,
-                "total_chunks": len(file_chunks),
-                "page_filter": page,
-                "limit_applied": limit,
-                "retrieved_at": datetime.now().isoformat()
-            }
-        )
-        
-    except Exception as e:
-        print(f"Chunk retrieval failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Chunk retrieval failed: {str(e)}"
-        )
-
 @router.get("/file/{file_id}/download")
 async def download_file(
     file_id: str,
@@ -230,58 +94,28 @@ async def download_file(
 ):
     """
     Download a file.
-    
-    Args:
-        file_id: File identifier
-        workspace_id: Workspace identifier
-        current_user: Authenticated user
-    
-    Returns:
-        File response for download
     """
     try:
-        # Initialize services
-        storage_service = StorageService()
+        # Look for file in workspace directory
+        workspace_dir = os.path.join(UPLOAD_DIR, workspace_id)
+        file_path = None
         
-        # Get file info
-        file_info = await storage_service.retrieve_file(
-            file_id,
-            workspace_id,
-            f"{file_id}.pdf"  # Assuming PDF for now
-        )
+        if os.path.exists(workspace_dir):
+            for filename in os.listdir(workspace_dir):
+                if filename.startswith(file_id) and not filename.endswith('_metadata.json'):
+                    file_path = os.path.join(workspace_dir, filename)
+                    break
         
-        if not file_info:
+        if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")
         
-        # For local storage, return the file directly
-        if file_info.get('storage_type') == 'local':
-            file_path = file_info.get('storage_path')
-            if os.path.exists(file_path):
-                return FileResponse(
-                    path=file_path,
-                    filename=file_info.get('filename', f"{file_id}.pdf"),
-                    media_type='application/pdf'
-                )
-            else:
-                raise HTTPException(status_code=404, detail="File not found on disk")
-        
-        # For S3 storage, redirect to presigned URL
-        elif file_info.get('storage_type') == 's3':
-            presigned_url = file_info.get('presigned_url')
-            if presigned_url:
-                return JSONResponse(
-                    status_code=200,
-                    content={
-                        "download_url": presigned_url,
-                        "expires_in": "1 hour",
-                        "message": "Use the download_url to access the file"
-                    }
-                )
-            else:
-                raise HTTPException(status_code=500, detail="Download URL not available")
-        
-        else:
-            raise HTTPException(status_code=500, detail="Unsupported storage type")
+        # Return file for download
+        filename = os.path.basename(file_path).replace(f"{file_id}_", "", 1)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type='application/octet-stream'
+        )
         
     except HTTPException:
         raise
@@ -300,71 +134,59 @@ async def get_file_metadata(
 ):
     """
     Get comprehensive metadata for a file.
-    
-    Args:
-        file_id: File identifier
-        workspace_id: Workspace identifier
-        current_user: Authenticated user
-    
-    Returns:
-        JSON response with file metadata
     """
     try:
-        # Initialize services
-        storage_service = StorageService()
-        vector_db = VectorDBService(workspace_id)
+        # Look for file in workspace directory
+        workspace_dir = os.path.join(UPLOAD_DIR, workspace_id)
+        file_path = None
+        metadata_path = None
         
-        # Get storage metadata
-        storage_info = await storage_service.retrieve_file(
-            file_id,
-            workspace_id,
-            f"{file_id}.pdf"
-        )
+        if os.path.exists(workspace_dir):
+            for filename in os.listdir(workspace_dir):
+                if filename.startswith(file_id):
+                    if filename.endswith('_metadata.json'):
+                        metadata_path = os.path.join(workspace_dir, filename)
+                    else:
+                        file_path = os.path.join(workspace_dir, filename)
         
-        if not storage_info:
+        if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")
         
-        # Get vector database metadata
-        await vector_db.initialize()
-        search_results = vector_db.search(
-            query_vector=None,
-            top_k=1000
-        )
+        # Get basic file info
+        file_size = os.path.getsize(file_path)
+        upload_time = datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
+        modified_time = datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
         
-        # Filter chunks for this file
-        file_chunks = [r for r in search_results if r.get('file_id') == file_id]
+        # Try to get stored metadata
+        stored_metadata = {}
+        if metadata_path and os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r') as f:
+                    stored_metadata = json.load(f)
+            except:
+                pass
         
-        # Calculate metadata
-        total_chunks = len(file_chunks)
-        total_pages = len(set(chunk.get('page', 1) for chunk in file_chunks))
-        total_characters = sum(len(chunk.get('text', '')) for chunk in file_chunks)
-        
-        # Get page statistics
-        page_stats = {}
-        for chunk in file_chunks:
-            page = chunk.get('page', 1)
-            if page not in page_stats:
-                page_stats[page] = {
-                    "chunk_count": 0,
-                    "character_count": 0
-                }
-            page_stats[page]["chunk_count"] += 1
-            page_stats[page]["character_count"] += len(chunk.get('text', ''))
-        
+        # Prepare comprehensive metadata
         metadata = {
-            "file_id": file_id,
-            "workspace_id": workspace_id,
-            "storage_info": storage_info,
-            "vector_stats": {
-                "total_chunks": total_chunks,
-                "total_pages": total_pages,
-                "total_characters": total_characters,
-                "average_chunk_size": total_characters / total_chunks if total_chunks > 0 else 0
+            "storage_info": {
+                "file_id": file_id,
+                "filename": os.path.basename(file_path).replace(f"{file_id}_", "", 1),
+                "workspace_id": workspace_id,
+                "status": "stored",
+                "storage_path": file_path,
+                "storage_type": "local",
+                "file_size": file_size,
+                "upload_time": upload_time,
+                "modified_time": modified_time
             },
-            "page_statistics": page_stats,
-            "chunk_distribution": {
-                "chunks_per_page": {page: stats["chunk_count"] for page, stats in page_stats.items()}
+            "file_statistics": {
+                "file_size_bytes": file_size,
+                "file_size_mb": round(file_size / (1024 * 1024), 2),
+                "file_extension": os.path.splitext(file_path)[1].lower(),
+                "is_readable": os.access(file_path, os.R_OK),
+                "is_writable": os.access(file_path, os.W_OK)
             },
+            "stored_metadata": stored_metadata,
             "retrieved_at": datetime.now().isoformat()
         }
         
@@ -380,4 +202,117 @@ async def get_file_metadata(
         raise HTTPException(
             status_code=500,
             detail=f"Metadata retrieval failed: {str(e)}"
+        )
+
+@router.delete("/file/{file_id}")
+async def delete_file(
+    file_id: str,
+    workspace_id: str,
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Delete a file and its associated data.
+    """
+    try:
+        workspace_dir = os.path.join(UPLOAD_DIR, workspace_id)
+        
+        # Find and delete the file and metadata
+        deleted_files = []
+        if os.path.exists(workspace_dir):
+            for filename in os.listdir(workspace_dir):
+                if filename.startswith(file_id):
+                    file_path = os.path.join(workspace_dir, filename)
+                    try:
+                        os.remove(file_path)
+                        deleted_files.append(filename)
+                    except Exception as e:
+                        print(f"Failed to delete {filename}: {e}")
+        
+        if not deleted_files:
+            raise HTTPException(
+                status_code=404,
+                detail="File not found"
+            )
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "file_id": file_id,
+                "workspace_id": workspace_id,
+                "status": "deleted",
+                "message": f"Deleted {len(deleted_files)} file(s)",
+                "deleted_files": deleted_files,
+                "deleted_at": datetime.now().isoformat()
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"File deletion failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"File deletion failed: {str(e)}"
+        )
+
+@router.get("/files/{workspace_id}")
+async def list_workspace_files(
+    workspace_id: str,
+    current_user: dict = Depends(verify_token)
+):
+    """
+    List all files in a workspace.
+    """
+    try:
+        workspace_dir = os.path.join(UPLOAD_DIR, workspace_id)
+        
+        if not os.path.exists(workspace_dir):
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "workspace_id": workspace_id,
+                    "files": [],
+                    "total_files": 0,
+                    "retrieved_at": datetime.now().isoformat()
+                }
+            )
+        
+        files = []
+        for filename in os.listdir(workspace_dir):
+            if filename.endswith('_metadata.json'):
+                continue
+                
+            file_path = os.path.join(workspace_dir, filename)
+            if os.path.isfile(file_path):
+                # Extract file_id and original filename
+                parts = filename.split('_', 1)
+                if len(parts) == 2:
+                    file_id, original_filename = parts
+                    
+                    file_info = {
+                        "file_id": file_id,
+                        "filename": original_filename,
+                        "workspace_id": workspace_id,
+                        "storage_path": file_path,
+                        "file_size": os.path.getsize(file_path),
+                        "upload_time": datetime.fromtimestamp(os.path.getctime(file_path)).isoformat(),
+                        "storage_type": "local"
+                    }
+                    files.append(file_info)
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "workspace_id": workspace_id,
+                "files": files,
+                "total_files": len(files),
+                "retrieved_at": datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        print(f"File listing failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"File listing failed: {str(e)}"
         )
