@@ -1,27 +1,44 @@
+# FastAPI and web framework dependencies
 fastapi
 uvicorn[standard]
+python-multipart
+requests
+aiohttp
+beautifulsoup4
+pydantic
+pydantic-settings
+
+# Database and storage
 motor
-python-dotenv
 pymongo
+redis>=4.5.0
+boto3
+cloudinary
+
+# Authentication and security
 bcrypt
 python-jose[cryptography]
-cloudinary
-python-multipart
-pydantic-settings
 PyJWT
-redis
-rq
-boto3
-faiss-cpu
-sentence-transformers
-transformers
-torch
-requests
-beautifulsoup4
-aiohttp
-pydantic
+
+# Configuration
+python-dotenv
+
+# AI and Machine Learning (Gemini-focused only)
+google-generativeai
+google-auth
+google-auth-oauthlib
+
+# Document Processing Dependencies
+# Basic formats
 PyPDF2
 python-docx
-numpy
+
+# Additional formats for enhanced document processing
+striprtf          # For RTF file processing
+odfpy            # For ODT (OpenDocument Text) file processing
+markdown         # For Markdown file processing with extensions
+pandas           # For CSV analysis and processing
+
+# Testing
 pytest
 pytest-asyncio
