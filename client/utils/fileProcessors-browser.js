@@ -18,12 +18,10 @@ export const processFile = (file) => {
             extractedData = await processPdfFile(content);
             break;
           case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            // For .docx files we'll have to use a simplified approach in the browser
-            extractedData = { text: "DOCX file uploaded (processing on server)" };
+            extractedData = await processDocxFile(content);
             break;
           case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-            // For .pptx files we'll have to use a simplified approach in the browser
-            extractedData = { slides: ["PPTX file uploaded (processing on server)"] };
+            extractedData = await processPptxFile(content);
             break;
           case "image/jpeg":
           case "image/png":
@@ -49,6 +47,7 @@ export const processFile = (file) => {
     reader.readAsArrayBuffer(file);
   });
 };
+
 
 const processTextFile = async (content) => {
   const decoder = new TextDecoder();
@@ -100,4 +99,36 @@ const getImageDimensions = (arrayBuffer) => {
     };
     img.src = URL.createObjectURL(blob);
   });
+};
+
+const processDocxFile = async (arrayBuffer) => {
+  try {
+    const mammoth = await import("mammoth");
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return {
+      text: result.value,
+    };
+  } catch (error) {
+    console.error("Error processing DOCX:", error);
+    return { text: "Error processing DOCX file" };
+  }
+};
+
+const processPptxFile = async (arrayBuffer) => {
+  try {
+    const pptx2json = await import("pptx2json");
+    const result = await pptx2json.parse(arrayBuffer);
+
+    // Extract text from slides
+    const slides = result.slides.map((slide) =>
+      slide.text ? slide.text.join(" ") : "No text content"
+    );
+
+    return {
+      slides,
+    };
+  } catch (error) {
+    console.error("Error processing PPTX:", error);
+    return { slides: ["Error processing PPTX file"] };
+  }
 };
