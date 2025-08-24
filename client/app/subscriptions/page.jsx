@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import { Check, Apple, ExternalLink } from "lucide-react"
+import { Navbar } from "@/components/layout/Navbar"
 
 
 export default function PricingPage() {
@@ -14,8 +15,9 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-950 text-white p-8 pt-16">
+      <Navbar/>  
+      <div className="max-w-6xl mx-auto mt-1">
         {/* Billing Toggle */}
         <div className="flex justify-center mb-12">
           <div className="flex bg-slate-800 rounded-lg p-1">
