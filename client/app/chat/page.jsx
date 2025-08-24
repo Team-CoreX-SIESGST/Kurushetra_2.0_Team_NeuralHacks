@@ -1,16 +1,38 @@
-// page.jsx (or App.jsx if you're using CRA/Vite)
-'use client'
-import React from "react";
-import { ChatInterface } from "@/chat-components/chatInterface"; // adjust path if needed
+"use client";
 
+import { useState, useEffect, useRef } from "react";
+import {
+  Send,
+  Plus,
+  MessageSquare,
+  Edit3,
+  Trash2,
+  User,
+  Bot,
+  Loader2,
+  Menu,
+  X,
+  Search,
+  FileText,
+  Sparkles,
+  Settings,
+  LogOut,
+  MoreHorizontal,
+  Archive,
+} from "lucide-react";
 
-const Page = () => {
+import { ChatInterface } from "@/chat-components/index";
+
+// Main Page Component
+export default function ChatPage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   return (
-    <main className="h-screen w-screen">
-      <ChatInterface />
-      {/* hhuuhuuh */}
-    </main>
+    <div className="min-h-screen bg-white dark:bg-slate-900">
+      <ChatInterface
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
+    </div>
   );
-};
-
-export default Page;
+}
