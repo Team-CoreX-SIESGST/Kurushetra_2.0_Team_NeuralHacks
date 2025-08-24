@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Auth settings
     auth_public_key_url: str = ""
     
+    # Application mode
+    demo_mode: str = "true"
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"  # 👈 Add this to ignore extra fields

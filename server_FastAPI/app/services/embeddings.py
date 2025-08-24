@@ -6,7 +6,7 @@ Handles text embedding generation using sentence transformers.
 import numpy as np
 from typing import List, Union
 from sentence_transformers import SentenceTransformer
-from app.config import settings
+from app.settings import settings
 
 class EmbeddingsService:
     """Service for generating and managing text embeddings."""

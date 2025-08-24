@@ -11,7 +11,7 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
 import json
-from app.config import settings
+from app.settings import settings
 
 class StorageService:
     """Service for managing file storage and retrieval."""

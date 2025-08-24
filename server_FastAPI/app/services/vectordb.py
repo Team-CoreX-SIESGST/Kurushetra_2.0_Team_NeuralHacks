@@ -9,7 +9,7 @@ import json
 import os
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-from app.config import settings
+from app.settings import settings
 
 class VectorDBService:
     """Service for managing vector database operations using FAISS."""

@@ -8,7 +8,7 @@ import aiohttp
 from typing import Optional, Dict, Any
 from app.config.model_routing import IntentType, get_model_for_intent, get_fallback_model
 from app.prompts.templates import format_routing_prompt
-from app.config import settings
+from app.settings import settings
 
 class ModelRouter:
     """Routes user queries to appropriate models based on intent."""
@@ -36,12 +36,19 @@ class ModelRouter:
                 
                 async with session.post(f"{self.ollama_host}/api/generate", json=payload) as response:
                     if response.status == 200:
-                        result = await response.json()
-                        intent = result.get("response", "").strip().lower()
-                        
-                        # Validate intent
-                        if intent in [intent_type.value for intent_type in IntentType]:
-                            return intent
+                        try:
+                            result = await response.json()
+                            intent = result.get("response", "").strip().lower()
+                            
+                            print(f"Model router response: {intent}")
+                            
+                            # Validate intent
+                            if intent in [intent_type.value for intent_type in IntentType]:
+                                return intent
+                            else:
+                                print(f"Invalid intent received: {intent}")
+                        except Exception as json_error:
+                            print(f"Failed to parse model router response: {json_error}")
                     
             # Fallback to research_longform if classification fails
             return IntentType.RESEARCH_LONGFORM.value

@@ -7,14 +7,14 @@ import json
 import aiohttp
 from typing import List, Dict, Any, Optional
 from app.prompts.templates import format_reranker_prompt
-from app.config import settings
+from app.settings import settings
 
 class RerankerService:
     """Service for reranking search results using cross-encoder models."""
     
     def __init__(self):
         self.ollama_host = settings.ollama_host
-        self.fallback_model = "llama2:7b"  # Fallback model for reranking
+        self.fallback_model = "phi3:3.8b"  # Fallback model for reranking
     
     async def rerank_results(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 10) -> List[Dict[str, Any]]:
         """Rerank search candidates based on query relevance."""

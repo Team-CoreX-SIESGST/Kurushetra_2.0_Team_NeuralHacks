@@ -143,11 +143,31 @@ async def search_documents(
         
         # Step 6: Final summarization (if requested)
         if request.summarize:
-            summary = await summarizer_service.generate_summary(
-                request.query,
-                final_results,
-                model_config.get('model_path')
-            )
+            try:
+                summary = await summarizer_service.generate_summary(
+                    request.query,
+                    final_results,
+                    model_config.get('model_path')
+                )
+                
+                # Check if summary generation was successful
+                if not summary or not summary.get('answer'):
+                    print("Summary generation returned empty result, using fallback")
+                    summary = {
+                        "answer": f"Found {len(final_results)} relevant results for your query.",
+                        "confidence": 0.5,
+                        "sources": [],
+                        "code": None
+                    }
+            except Exception as summarize_error:
+                print(f"Summarization failed with error: {summarize_error}")
+                # Create fallback summary
+                summary = {
+                    "answer": f"Found {len(final_results)} relevant results for your query, but summarization failed.",
+                    "confidence": 0.3,
+                    "sources": [],
+                    "code": None
+                }
             
             # Prepare sources for response
             sources = []

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import connect_db
 from app.routes import user_routes
 from app.api.v1 import uploads, search, files
-from app.config import settings
+from app.settings import settings
 
 app = FastAPI(
     title="OmniSearch AI API",
@@ -22,9 +22,9 @@ app.add_middleware(
 
 # Include routes
 app.include_router(user_routes.router, prefix="/api")
-app.include_router(uploads.router, prefix="/api/v1")
-app.include_router(search.router, prefix="/api/v1")
-app.include_router(files.router, prefix="/api/v1")
+app.include_router(uploads.router)
+app.include_router(search.router) 
+app.include_router(files.router)
 
 @app.on_event("startup")
 async def startup_event():

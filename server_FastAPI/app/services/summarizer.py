@@ -7,14 +7,14 @@ import json
 import aiohttp
 from typing import List, Dict, Any, Optional
 from app.prompts.templates import format_summarizer_prompt
-from app.config import settings
+from app.settings import settings
 
 class SummarizerService:
     """Service for generating final summaries with source citations."""
     
     def __init__(self):
         self.ollama_host = settings.ollama_host
-        self.default_model = "llama2:13b"  # Good for summarization
+        self.default_model = "llama2:7b-chat"  # Good for summarization
     
     async def generate_summary(self, user_query: str, sources: List[Dict[str, Any]], model_path: str = None) -> Dict[str, Any]:
         """Generate a final summary with source citations."""
@@ -49,27 +49,30 @@ class SummarizerService:
             
             # Use Ollama API for summarization
             async with aiohttp.ClientSession() as session:
-                payload = {
-                    "model": model_to_use,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.3,
-                        "num_predict": 2000
+                try:
+                    payload = {
+                        "model": model_to_use,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.3,
+                            "num_predict": 2000
+                        }
                     }
-                }
-                
-                async with session.post(f"{self.ollama_host}/api/generate", json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        response_text = result.get("response", "")
-                        
-                        # Parse JSON response
-                        summary = self._parse_summary_response(response_text, formatted_sources)
-                        
-                        # Validate summary structure
-                        if self._validate_summary(summary):
-                            return summary
+                    
+                    async with session.post(f"{self.ollama_host}/api/generate", json=payload) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            response_text = result.get("response", "")
+                            
+                            # Parse JSON response
+                            summary = self._parse_summary_response(response_text, formatted_sources)
+                            
+                            # Validate summary structure
+                            if self._validate_summary(summary):
+                                return summary
+                finally:
+                    await session.close()
                     
             # Fallback: generate basic summary if parsing fails
             return self._generate_fallback_summary(user_query, formatted_sources)
@@ -86,14 +89,26 @@ class SummarizerService:
     def _parse_summary_response(self, response_text: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Parse the summarizer model response."""
         try:
+            # Check if response is empty
+            if not response_text or response_text.strip() == "":
+                print("Empty response from summarizer")
+                return {}
+            
             # Extract JSON from response
             json_start = response_text.find('{')
             json_end = response_text.rfind('}') + 1
             
             if json_start == -1 or json_end == 0:
+                print(f"No JSON found in response: {response_text[:100]}...")
                 return {}
             
             json_str = response_text[json_start:json_end]
+            
+            # Validate JSON string is not empty
+            if not json_str.strip():
+                print("Empty JSON string extracted")
+                return {}
+            
             summary_data = json.loads(json_str)
             
             # Ensure required fields exist
