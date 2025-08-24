@@ -1,16 +1,56 @@
 import os
 import psutil
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from pydantic import Field, validator, root_validator
+from typing import Optional, List, Dict, Any
+from enum import Enum
+import secrets
+from pathlib import Path
+
+class EnvironmentType(str, Enum):
+    """Environment types for the application."""
+    DEVELOPMENT = "development"
+    STAGING = "staging"
+    PRODUCTION = "production"
+    TESTING = "testing"
+
+class LogLevel(str, Enum):
+    """Available logging levels."""
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 class Settings(BaseSettings):
-    # MongoDB settings (optional for demo)
-    mongodb_url: str = ""
-    server_port: int = 8000
+    """Enhanced application settings with validation and type safety."""
     
-    # Authentication settings (optional for demo)
-    access_token_secret: str = "demo_access_token_secret_for_testing_only"
-    refresh_token_secret: str = "demo_refresh_token_secret_for_testing_only"
+    # Environment configuration
+    environment: EnvironmentType = Field(default=EnvironmentType.DEVELOPMENT, description="Application environment")
+    debug: bool = Field(default=True, description="Enable debug mode")
+    testing: bool = Field(default=False, description="Enable testing mode")
+    
+    # Server configuration
+    server_host: str = Field(default="0.0.0.0", description="Server host")
+    server_port: int = Field(default=8001, ge=1024, le=65535, description="Server port")
+    server_workers: int = Field(default=1, ge=1, le=8, description="Number of worker processes")
+    
+    # Database settings
+    mongodb_url: str = Field(default="", description="MongoDB connection URL")
+    mongodb_database: str = Field(default="omnisearch", description="MongoDB database name")
+    mongodb_timeout: int = Field(default=10000, description="MongoDB connection timeout in ms")
+    
+    # Authentication settings
+    access_token_secret: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="JWT access token secret"
+    )
+    refresh_token_secret: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="JWT refresh token secret"
+    )
+    access_token_expire_minutes: int = Field(default=30, ge=1, description="Access token expiration in minutes")
+    refresh_token_expire_days: int = Field(default=7, ge=1, description="Refresh token expiration in days")
     
     # Cloudinary settings (optional for demo)
     cloudinary_cloud_name: str = "demo_cloud_name"

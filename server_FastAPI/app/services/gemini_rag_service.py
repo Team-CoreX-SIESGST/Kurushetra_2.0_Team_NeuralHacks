@@ -4,6 +4,7 @@ Takes JSON document data and generates comprehensive summaries using Gemini's RA
 """
 
 import json
+import time
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from app.services.gemini_service import GeminiService
@@ -291,6 +292,116 @@ class GeminiRAGService:
         except Exception as e:
             print(f"Search tag generation failed: {e}")
             return []
+    
+    async def generate_search_tags_from_query(self, query: str) -> List[str]:
+        """Generate search tags from a user query using Gemini."""
+        try:
+            await self.gemini_service.initialize()
+            return await self.gemini_service.generate_content_tags(query, max_tags=8)
+        except Exception as e:
+            print(f"Search tag generation from query failed: {e}")
+            # Fallback: extract keywords from query
+            words = query.lower().split()
+            common_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'what', 'how', 'when', 'where', 'why'}
+            keywords = [word for word in words if len(word) > 2 and word not in common_words]
+            return keywords[:5]
+    
+    async def generate_answer_from_query_and_web(self, query: str, web_results: List[Dict[str, Any]], workspace_id: str) -> Dict[str, Any]:
+        """Generate a comprehensive answer from query and web results."""
+        try:
+            await self.gemini_service.initialize()
+            
+            # Combine web results into context
+            web_context = ""
+            for result in web_results[:5]:  # Use top 5 results
+                title = result.get('title', '')
+                snippet = result.get('snippet', '')
+                url = result.get('url', '')
+                web_context += f"Title: {title}\nContent: {snippet}\nSource: {url}\n\n"
+            
+            # Create comprehensive prompt
+            prompt = f"""
+            Based on the following web search results, provide a comprehensive answer to the user's query.
+            
+            Query: {query}
+            
+            Web Search Results:
+            {web_context}
+            
+            Please provide a detailed answer that:
+            1. Directly addresses the user's question
+            2. Incorporates relevant information from the web results
+            3. Includes proper citations to sources
+            4. Is well-structured and informative
+            
+            Format your response as a comprehensive answer with source references.
+            """
+            
+            response = await self.gemini_service._make_gemini_request(prompt)
+            
+            if response:
+                return {
+                    "answer": response,
+                    "confidence": 0.8,
+                    "web_sources_used": len(web_results),
+                    "processing_time": 0.0
+                }
+            else:
+                return {
+                    "answer": "I couldn't generate a comprehensive answer at this time. Please try rephrasing your question.",
+                    "confidence": 0.3,
+                    "web_sources_used": 0,
+                    "processing_time": 0.0
+                }
+                
+        except Exception as e:
+            print(f"Answer generation failed: {e}")
+            return {
+                "answer": f"I found {len(web_results)} relevant sources for your query: '{query}', but encountered an error processing them. Please try again.",
+                "confidence": 0.5,
+                "web_sources_used": len(web_results),
+                "error": str(e),
+                "processing_time": 0.0
+            }
+    
+    async def generate_simple_answer(self, query: str, workspace_id: str) -> Dict[str, Any]:
+        """Generate a simple answer without web enhancement."""
+        try:
+            await self.gemini_service.initialize()
+            
+            prompt = f"""
+            Provide a concise and helpful answer to the following question:
+            
+            Question: {query}
+            
+            Please give a direct, informative answer that addresses the user's question clearly and concisely.
+            """
+            
+            start_time = time.time()
+            response = await self.gemini_service._make_gemini_request(prompt)
+            processing_time = time.time() - start_time
+            
+            if response:
+                return {
+                    "answer": response,
+                    "confidence": 0.7,
+                    "processing_time": processing_time
+                }
+            else:
+                return {
+                    "answer": "I'm unable to provide an answer right now. Please try rephrasing your question.",
+                    "confidence": 0.3,
+                    "processing_time": processing_time
+                }
+                
+        except Exception as e:
+            print(f"Simple answer generation failed: {e}")
+            return {
+                "answer": f"I encountered an error while processing your question: '{query}'. Please try again.",
+                "confidence": 0.2,
+                "error": str(e),
+                "processing_time": 0.0
+            }
     
     def get_service_stats(self) -> Dict[str, Any]:
         """Get statistics about the RAG service."""
