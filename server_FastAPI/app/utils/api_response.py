@@ -15,3 +15,17 @@ def send_response(
         "apiVersion": api_version or "No Version"
     }
     return JSONResponse(content=response_obj, status_code=status_code)
+
+def create_response(
+    success: bool,
+    message: str,
+    data: Any = None,
+    status_code: int = 200
+):
+    """Create a standardized API response."""
+    response_obj = {
+        "success": success,
+        "message": message,
+        "data": data
+    }
+    return JSONResponse(content=response_obj, status_code=status_code)
