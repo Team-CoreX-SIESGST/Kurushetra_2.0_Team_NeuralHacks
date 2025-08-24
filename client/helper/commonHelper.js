@@ -28,7 +28,7 @@ const handleRequest = async (axiosCall) => {
     };
   }
 };
-const base_url = "http://localhost:3000/api"
+const base_url = "http://localhost:8000/api"
 
 export const apiClient = {
   get: async (url, headers = {}) =>
