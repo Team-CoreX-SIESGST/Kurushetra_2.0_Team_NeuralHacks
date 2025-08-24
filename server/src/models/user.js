@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: true
+            required: false
         },
         // role: {
         //     type: mongoose.Schema.Types.ObjectId,
@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
         date_of_birth: {
             type: String,
             default: null
+        },
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true
         }
         // created_by: {
         //     type: mongoose.Schema.Types.ObjectId,
