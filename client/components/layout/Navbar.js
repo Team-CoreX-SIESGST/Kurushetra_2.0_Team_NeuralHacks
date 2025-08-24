@@ -9,10 +9,15 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Menu, X, User, LogOut, Sparkles } from "lucide-react";
 
 export function Navbar() {
-  const { user, logout, loading } = useAuth();
+  const { user, user_info, logout, loading } = useAuth(); // Added user_info to destructuring
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Debug: Log the auth state
+  useEffect(() => {
+    console.log("Auth Debug:", { user, user_info, loading });
+  }, [user, user_info, loading]);
 
   // Handle scroll effect for navbar background
   useEffect(() => {
@@ -28,7 +33,7 @@ export function Navbar() {
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);
     }
-  }, [pathname, isMobileMenuOpen]); // Dependency added for correctness
+  }, [pathname, isMobileMenuOpen]);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -43,7 +48,8 @@ export function Navbar() {
     exit: { opacity: 0, y: -20, transition: { duration: 0.2 } },
   };
 
-  // --- Component Rendering using React.createElement ---
+  // Use user_info if user is not available, or vice versa
+  const currentUser = user || user_info;
 
   // Helper for creating desktop navigation links
   const createDesktopNavLinks = () =>
@@ -138,7 +144,7 @@ export function Navbar() {
             { className: "hidden md:flex items-center space-x-3" },
             // Only render buttons after loading is complete
             !loading &&
-              (user
+              (currentUser
                 ? // Logged In state
                   React.createElement(
                     React.Fragment,
@@ -148,7 +154,9 @@ export function Navbar() {
                       {
                         className: "text-sm text-slate-600 dark:text-slate-400",
                       },
-                      `Welcome, ${user.name}`
+                      `Welcome, ${
+                        currentUser.name || currentUser.username || "User"
+                      }`
                     ),
                     React.createElement(
                       "button",
@@ -226,7 +234,7 @@ export function Navbar() {
                 },
                 // Only render buttons after loading is complete
                 !loading &&
-                  (user
+                  (currentUser
                     ? // Logged In Mobile
                       React.createElement(
                         React.Fragment,
@@ -252,7 +260,9 @@ export function Navbar() {
                               className:
                                 "font-medium text-slate-700 dark:text-slate-200",
                             },
-                            `Welcome, ${user.name}`
+                            `Welcome, ${
+                              currentUser.name || currentUser.username || "User"
+                            }`
                           )
                         ),
                         React.createElement(

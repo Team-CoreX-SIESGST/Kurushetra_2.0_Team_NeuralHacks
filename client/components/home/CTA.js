@@ -109,10 +109,7 @@ export function CTA() {
           {/* Bottom Text */}
           <div className="mt-16">
             {/* THEME CHANGE: Adapted bottom text for light/dark modes */}
-            <p className="text-slate-600 dark:text-slate-400 text-sm">
-              🔒 Privacy-first &nbsp;&bull;&nbsp; 🚀 Lightning fast
-              &nbsp;&bull;&nbsp; 🤖 AI-powered insights
-            </p>
+            <p className="text-slate-600 dark:text-slate-400 text-sm"></p>
           </div>
         </div>
       </div>

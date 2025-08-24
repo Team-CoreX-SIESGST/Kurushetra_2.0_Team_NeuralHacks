@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { motion } from "framer-motion";
 import {
   Eye,
   EyeOff,
@@ -17,6 +17,23 @@ import {
 } from "lucide-react";
 import { registerUser } from "@/services/auth/authServices";
 import { useGoogleLogin } from "@react-oauth/google";
+
+// Animation variants for consistency
+const FADE_IN_STAGGER_VARIANTS = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const FADE_IN_UP_VARIANTS = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -32,78 +49,42 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isFormValid, setIsFormValid] = useState(false);
   const router = useRouter();
-  // Added this to use the register function from AuthProvider
 
-  // Check if form is valid whenever formData changes
+  // Validate form on data change to enable/disable submit button
   useEffect(() => {
-    const isValid = validateFormData();
-    setIsFormValid(isValid);
+    const validate = () => {
+      const { name, email, date_of_birth, password, confirmPassword } =
+        formData;
+      if (!name || !email || !date_of_birth || !password || !confirmPassword)
+        return false;
+      if (!/\S+@\S+\.\S+/.test(email)) return false;
+      if (password.length < 6) return false;
+      if (password !== confirmPassword) return false;
+
+      const today = new Date();
+      const birthDate = new Date(date_of_birth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age--;
+      }
+      return age >= 13 && birthDate <= today;
+    };
+    setIsFormValid(validate());
   }, [formData]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError("");
   };
 
-  const validateFormData = () => {
-    const { name, email, date_of_birth, password, confirmPassword } = formData;
-
-    // Check if all fields are filled
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !date_of_birth.trim() ||
-      !password.trim() ||
-      !confirmPassword.trim()
-    ) {
-      return false;
-    }
-
-    // Check email format
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return false;
-    }
-
-    // Check password length
-    if (password.length < 6) {
-      return false;
-    }
-
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      return false;
-    }
-
-    // Check if date of birth is valid (user must be at least 13 years old)
-    const today = new Date();
-    const birthDate = new Date(date_of_birth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    if (age < 13 || birthDate > today) {
-      return false;
-    }
-
-    return true;
-  };
-
-  const validateForm = () => {
+  // Set specific error messages on submit attempt
+  const validateOnSubmit = () => {
     if (!formData.name.trim()) {
       setError("Name is required");
-      return false;
-    }
-    if (!formData.email.trim()) {
-      setError("Email is required");
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -115,31 +96,23 @@ export default function RegisterPage() {
       return false;
     }
 
-    // Validate age (must be at least 13 years old)
     const today = new Date();
     const birthDate = new Date(formData.date_of_birth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
     if (birthDate > today) {
       setError("Date of birth cannot be in the future");
       return false;
     }
 
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     if (age < 13) {
-      setError("You must be at least 13 years old to register");
+      setError("You must be at least 13 years old");
       return false;
     }
 
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
+      setError("Password must be at least 6 characters");
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -151,25 +124,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
-
+    if (!validateOnSubmit()) return;
     setIsLoading(true);
     setError("");
-
     try {
       const result = await registerUser(formData);
-      console.log("feofhewio", result.data.data);
-
-      // Store refresh token in local storage
       if (result?.data) {
         localStorage.setItem("refresh_token", result.data.data.refresh_token);
-        // console.log(result.data.refresh_token)
-
-        console.log(result.data.data);
         localStorage.setItem("user", result.data.data);
       }
-
       router.push("/");
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
@@ -181,17 +144,12 @@ export default function RegisterPage() {
   const handleGoogleSuccess = async (response) => {
     setIsLoading(true);
     setError("");
-
     try {
-      // Send only the Google ID token to your backend
-      console.log(response.access_token)
       const result = await registerUser({ googleToken: response.access_token });
-
       if (result?.data) {
         localStorage.setItem("refresh_token", result.data.data.refresh_token);
         localStorage.setItem("user", JSON.stringify(result.data.data));
       }
-
       router.push("/");
     } catch (err) {
       setError(err.message || "Google registration failed. Please try again.");
@@ -200,232 +158,169 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleError = () => {
+  const handleGoogleError = () =>
     setError("Google sign-in failed. Please try again.");
-  };
 
   const googleLogin = useGoogleLogin({
     onSuccess: handleGoogleSuccess,
     onError: handleGoogleError,
-    flow: "implicit", // This will return an access_token (ID token)
+    flow: "implicit",
   });
 
-  // Get max date (today) and min date (120 years ago) for date input
   const today = new Date().toISOString().split("T")[0];
   const minDate = new Date(new Date().getFullYear() - 120, 0, 1)
     .toISOString()
     .split("T")[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-400 rounded-2xl opacity-0 hover:opacity-20 transition-opacity duration-300"></div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 -z-10 bg-[radial-gradient(45rem_45rem_at_50%_50%,_theme(colors.indigo.100),_transparent_80%)] dark:bg-[radial-gradient(45rem_45rem_at_50%_50%,_theme(colors.indigo.950/40%),_transparent_80%)]"
+        aria-hidden="true"
+      />
+
+      <motion.div
+        initial="hidden"
+        animate="show"
+        variants={FADE_IN_STAGGER_VARIANTS}
+        className="max-w-md w-full space-y-8"
+      >
+        <motion.div variants={FADE_IN_UP_VARIANTS} className="text-center">
+          <div className="inline-flex justify-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Create your account
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">
+            Create an Account
           </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            Join thousands of developers building amazing projects
+          <p className="text-slate-600 dark:text-slate-400">
+            Start your journey with us today.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Registration Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center space-x-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name Field */}
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your full name"
-                />
+        <motion.div
+          variants={FADE_IN_UP_VARIANTS}
+          className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/10 dark:ring-slate-100/10 rounded-2xl shadow-2xl p-8"
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-red-700 dark:text-red-400 text-sm">
+                  {error}
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* Email Field */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Email Address <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
-                />
-              </div>
-            </div>
-
-            {/* Date of Birth Field */}
-            <div>
-              <label
-                htmlFor="date_of_birth"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Date of Birth <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Calendar className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="date_of_birth"
-                  name="date_of_birth"
-                  type="date"
-                  required
-                  value={formData.date_of_birth}
-                  onChange={handleChange}
-                  min={minDate}
-                  max={today}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                You must be at least 13 years old to register
-              </p>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Create a password (min. 6 characters)"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+            {/* Form Fields */}
+            {[
+              {
+                id: "name",
+                name: "name",
+                type: "text",
+                placeholder: "John Doe",
+                icon: User,
+                label: "Full Name",
+              },
+              {
+                id: "email",
+                name: "email",
+                type: "email",
+                placeholder: "you@example.com",
+                icon: Mail,
+                label: "Email Address",
+              },
+              {
+                id: "date_of_birth",
+                name: "date_of_birth",
+                type: "date",
+                placeholder: "",
+                icon: Calendar,
+                label: "Date of Birth",
+              },
+              {
+                id: "password",
+                name: "password",
+                type: showPassword ? "text" : "password",
+                placeholder: "Min. 6 characters",
+                icon: Lock,
+                label: "Password",
+              },
+              {
+                id: "confirmPassword",
+                name: "confirmPassword",
+                type: showConfirmPassword ? "text" : "password",
+                placeholder: "Confirm password",
+                icon: Lock,
+                label: "Confirm Password",
+              },
+            ].map((field) => (
+              <div key={field.id}>
+                <label
+                  htmlFor={field.id}
+                  className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
+                  {field.label}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <field.icon className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id={field.id}
+                    name={field.name}
+                    type={field.type}
+                    required
+                    value={formData[field.name]}
+                    onChange={handleChange}
+                    min={field.type === "date" ? minDate : undefined}
+                    max={field.type === "date" ? today : undefined}
+                    className="block w-full pl-10 pr-3 py-2.5 bg-slate-50/50 dark:bg-slate-800/40 text-slate-900 dark:text-slate-50 rounded-lg ring-1 ring-inset ring-slate-900/10 dark:ring-slate-100/10 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
+                    placeholder={field.placeholder}
+                  />
+                  {(field.name === "password" ||
+                    field.name === "confirmPassword") && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        field.name === "password"
+                          ? setShowPassword((s) => !s)
+                          : setShowConfirmPassword((s) => !s)
+                      }
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      {(
+                        field.name === "password"
+                          ? showPassword
+                          : showConfirmPassword
+                      ) ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
                   )}
-                </button>
-              </div>
-            </div>
-
-            {/* Confirm Password Field */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Confirm Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
                 </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Confirm your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
               </div>
-            </div>
+            ))}
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading || !isFormValid}
-              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white transition-all duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                isFormValid && !isLoading
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
-                  : "bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50"
-              }`}
+              className="group relative w-full inline-flex items-center justify-center px-6 py-3 mt-4 text-base font-semibold text-white bg-slate-900 rounded-full hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200 transition-all duration-300 shadow-lg disabled:bg-slate-400 dark:disabled:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <>
+                  <div className="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                   <span>Creating account...</span>
-                </div>
+                </>
               ) : (
-                <div className="flex items-center space-x-2">
+                <>
                   <span>Create Account</span>
-                  <ArrowRight
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      isFormValid ? "group-hover:translate-x-1" : ""
-                    }`}
-                  />
-                </div>
+                  <ArrowRight className="w-4 h-4 ml-1.5 group-hover:translate-x-1 transition-transform duration-200" />
+                </>
               )}
             </button>
           </form>
@@ -434,25 +329,24 @@ export default function RegisterPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
-                  Or continue with
+                <span className="px-2 bg-white/0 backdrop-blur-sm text-slate-500 dark:text-slate-400">
+                  Or sign up with
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Google OAuth Button (Frontend Only) */}
+          {/* Google Button */}
           <div className="mt-6">
             <button
-              type="button"
               onClick={() => googleLogin()}
-              disabled={isLoading}
-              className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full inline-flex justify-center items-center py-2.5 px-4 rounded-lg shadow-sm bg-white dark:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 ring-1 ring-inset ring-slate-900/10 dark:ring-slate-100/10 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-200"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                {/* Google SVG paths */}
                 <path
                   fill="currentColor"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -470,24 +364,23 @@ export default function RegisterPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span className="ml-2">Continue with Google</span>
+              Sign up with Google
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Sign In Link */}
-        <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-300">
+        <motion.div variants={FADE_IN_UP_VARIANTS} className="text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors duration-200"
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors duration-200"
             >
-              Sign in here
+              Sign in
             </Link>
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

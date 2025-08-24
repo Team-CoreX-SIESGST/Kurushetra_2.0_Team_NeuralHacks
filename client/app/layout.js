@@ -4,12 +4,6 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
-import "./globals.css";
-import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { AuthProvider } from "@/components/auth/AuthProvider";
-import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 const inter = Inter({ subsets: ["latin"] });
 
