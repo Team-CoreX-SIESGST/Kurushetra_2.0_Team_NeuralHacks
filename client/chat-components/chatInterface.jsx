@@ -6,7 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { ChatArea } from "./ChatArea";
 import { ChatInput } from "./ChatInput";
 
-const ChatInterface = () => {
+export const ChatInterface = () => {
   // Chat state
   const [messages, setMessages] = useState([
     {
@@ -172,5 +172,3 @@ const ChatInterface = () => {
     </div>
   );
 };
-
-export default ChatInterface;
