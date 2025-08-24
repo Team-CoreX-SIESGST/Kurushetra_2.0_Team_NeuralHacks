@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Menu, X, User, LogOut, Sparkles, ChevronDown } from "lucide-react";
-import { useToast } from "@/components/ui/ToastProvider"; 
+import { useToast } from "@/components/ui/ToastProvider";
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
@@ -62,23 +62,18 @@ export function Navbar() {
   //toast ke liye 🍞
   useEffect(() => {
     if (!isClient) return;
-    
+
     const currentAuthState = hasToken || !!user || !!localUser;
-    
+
     // If user just logged in (went from not authenticated to authenticated)
     if (!previousAuthState && currentAuthState && (user || localUser)) {
-      const userName = (user || localUser)?.name || (user || localUser)?.email || "User";
+      const userName =
+        (user || localUser)?.name || (user || localUser)?.email || "User";
       showToast(`Welcome back, ${userName}!`, "success");
     }
-    
+
     setPreviousAuthState(currentAuthState);
   }, [hasToken, user, localUser, isClient, showToast, previousAuthState]);
-
-
-
-
-
-
 
   // Scroll style
   useEffect(() => {
@@ -131,10 +126,12 @@ export function Navbar() {
     { href: "/features", label: "Features" },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
-    ...(isAuthenticated ? [
-      { href: "/chat", label: "Agent" },
-      { href: "/subscriptions", label: "Subscriptions" },
-    ]: []),
+    ...(isAuthenticated
+      ? [
+          { href: "/chat", label: "Agent" },
+          { href: "/subscriptions", label: "Subscriptions" },
+        ]
+      : []),
   ];
 
   const mobileMenuVariants = {
@@ -158,8 +155,6 @@ export function Navbar() {
       transition: { duration: 0.1, ease: "easeIn" },
     },
   };
-
-
 
   // Get user initial for avatar
   const getUserInitial = () => {
@@ -348,7 +343,7 @@ export function Navbar() {
                           React.createElement(
                             Link,
                             {
-                              href: "/profile",
+                              href: "/settings",
                               className:
                                 "flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
                               onClick: () => setIsProfileDropdownOpen(false),
