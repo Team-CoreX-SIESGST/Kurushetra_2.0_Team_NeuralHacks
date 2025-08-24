@@ -30,7 +30,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const router = useRouter();
+  const router = useRouter()
 
   useEffect(() => {
     loadSections();
