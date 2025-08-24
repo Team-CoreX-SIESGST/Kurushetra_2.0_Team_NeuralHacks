@@ -3,6 +3,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { userRoute } from "./controllers/user/userRoutes.js";
 // import roleRouter from "./controllers/roles/rolesRouter.js"
+import chatRouter from './controllers/chats/chatRoutes.js'
+import { verifyJWT } from "./middlewares/auth.middleware.js";
 const app = express();
 
 app.use(
@@ -19,5 +21,7 @@ app.use(cookieParser());
 
 app.use("/api/users", userRoute);
 // app.use("/api/role",roleRouter)
+app.use(verifyJWT);
+app.use("/api/sections",chatRouter);
 
 export { app };

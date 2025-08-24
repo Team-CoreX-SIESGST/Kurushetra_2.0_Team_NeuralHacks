@@ -3,6 +3,7 @@ import { deleteOnCloudinary,uploadOnCloudinary } from "./cloudinary.js";
 import { statusType } from "./statusType.js";
 import { sendResponse } from "./apiResonse.js";
 import { verifyGoogleToken } from "./googleAuth.js";
+import { chatLimiter } from "./rateLimiter.js";
 
 export {
   asyncHandler,
@@ -10,5 +11,6 @@ export {
   uploadOnCloudinary,
   statusType,
   sendResponse,
-  
+  chatLimiter,
+  verifyGoogleToken
 }
