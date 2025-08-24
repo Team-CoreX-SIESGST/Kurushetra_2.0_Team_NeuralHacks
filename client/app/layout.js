@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { Toaster } from "react-hot-toast";
+import StyleDiagnostic from "@/components/debug/StyleDiagnostic";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
 const inter = Inter({ subsets: ["latin"] });
@@ -55,6 +56,7 @@ export default function RootLayout({ children }) {
                     },
                   }}
                 />
+                <StyleDiagnostic />
               </ToastProvider>
             </AuthProvider>
           </ThemeProvider>

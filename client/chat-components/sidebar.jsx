@@ -24,7 +24,7 @@ export default function Sidebar({
     <div
       className={`${
         isSidebarOpen ? "w-80" : "w-0"
-      } transition-all duration-300 ease-out overflow-hidden md:relative absolute z-20 h-full`}
+      } transition-all duration-300 ease-out overflow-hidden md:relative absolute z-20 h-[100vh]`}
     >
       <div className="w-80 bg-slate-50 dark:bg-slate-800 flex flex-col h-full">
         <SidebarHeader

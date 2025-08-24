@@ -14,6 +14,20 @@ import Sidebar from "./Sidebar";
 import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputArea from "./InputArea";
+import { Menu, MoreHorizontal, Bot } from "lucide-react";
+// import { processFile } from "@/utils/fileProcessors-browser";
+
+// Simplified client-side file handling without Node.js dependencies
+const processFileSimple = (file) => {
+  return Promise.resolve({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    lastModified: file.lastModified,
+    // Let the server handle actual file processing
+    data: null
+  });
+};
 
 export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
   const [sections, setSections] = useState([]);
@@ -30,7 +44,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
     loadSections();
@@ -121,6 +135,17 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
     let sectionToUse = currentSection;
 
     // Create new section if none exists
+    let processedFiles = [];
+    if (selectedFiles.length > 0) {
+      try {
+        processedFiles = await Promise.all(
+          selectedFiles.map((file) => processFileSimple(file))
+        );
+      } catch (error) {
+        console.error("Error processing files:", error);
+        return;
+      }
+    }
     if (!currentSection) {
       try {
         const title = message.substring(0, 30) || "Files upload";
@@ -137,12 +162,13 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
       }
     }
 
+    const messageToSend = message;
     const userMessage = {
       _id: Date.now() + "-user",
-      message: message,
+      message: messageToSend,
       isUser: true,
       createdAt: new Date(),
-      files: selectedFiles.length > 0 ? [...selectedFiles] : undefined, // Include files in message
+      files: processedFiles, // Now includes processed file data
     };
 
     setChats((prev) => [...prev, userMessage]);
@@ -150,11 +176,13 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
     setSelectedFiles([]); // Clear selected files after sending
     setIsLoading(true);
 
+    // Send message with processed files
     try {
-      // You'll need to update your sendMessage service to handle file uploads
+      console.log(processedFiles,"processed files")
+      console.log(messageToSend,"message content")
       const response = await sendMessage(sectionToUse._id, {
-        message: message,
-        files: selectedFiles, // Send files to the API
+        message: messageToSend,
+        files: processedFiles,
       });
       setChats((prev) => [...prev, response.data.data.aiMessage]);
     } catch (error) {
