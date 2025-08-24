@@ -7,11 +7,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Menu, X, User, LogOut, Sparkles, ChevronDown } from "lucide-react";
+import { useToast } from "@/components/ui/ToastProvider"; 
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
+  const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [previousAuthState, setPreviousAuthState] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [localUser, setLocalUser] = useState(null);
@@ -19,6 +22,11 @@ export function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
+  // Auth state:
+  // - If token exists, we consider the user "authenticated" for UI purposes.
+  // - Prefer live context user, then local user from storage.
+  const isAuthenticated = isClient && (hasToken || !!user || !!localUser);
+  const userInfo = user || localUser;
   // Client-only setup
   useEffect(() => {
     setIsClient(true);
@@ -50,6 +58,27 @@ export function Navbar() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  //toast ke liye 🍞
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const currentAuthState = hasToken || !!user || !!localUser;
+    
+    // If user just logged in (went from not authenticated to authenticated)
+    if (!previousAuthState && currentAuthState && (user || localUser)) {
+      const userName = (user || localUser)?.name || (user || localUser)?.email || "User";
+      showToast(`Welcome back, ${userName}!`, "success");
+    }
+    
+    setPreviousAuthState(currentAuthState);
+  }, [hasToken, user, localUser, isClient, showToast, previousAuthState]);
+
+
+
+
+
+
 
   // Scroll style
   useEffect(() => {
@@ -102,6 +131,10 @@ export function Navbar() {
     { href: "/features", label: "Features" },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
+    ...(isAuthenticated ? [
+      { href: "/chat", label: "Agent" },
+      { href: "/subscriptions", label: "Subscriptions" },
+    ]: []),
   ];
 
   const mobileMenuVariants = {
@@ -126,11 +159,7 @@ export function Navbar() {
     },
   };
 
-  // Auth state:
-  // - If token exists, we consider the user "authenticated" for UI purposes.
-  // - Prefer live context user, then local user from storage.
-  const isAuthenticated = isClient && (hasToken || !!user || !!localUser);
-  const userInfo = user || localUser;
+
 
   // Get user initial for avatar
   const getUserInitial = () => {
