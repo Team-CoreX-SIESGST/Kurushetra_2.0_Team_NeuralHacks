@@ -9,3 +9,7 @@ export const registerUser = (data) => {
   return apiClient.post("/users/create", data);
 };
 
+export const loginUser = (payload) =>{
+  return apiClient.post("/users/login",payload);
+}
+
