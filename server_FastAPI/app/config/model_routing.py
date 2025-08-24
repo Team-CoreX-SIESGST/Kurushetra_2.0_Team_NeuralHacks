@@ -28,43 +28,43 @@ class ModelProfile:
 # Model routing table - maps intents to specific models
 MODEL_ROUTING_TABLE = {
     IntentType.CODE_GENERATION: ModelProfile(
-        name="codellama",
-        model_path="codellama:7b-instruct",
+        name="phi3",
+        model_path="phi3:3.8b",
         max_tokens=4096,
         temperature=0.1,
         capabilities=["code_generation", "code_explanation", "debugging"]
     ),
     IntentType.RESEARCH_LONGFORM: ModelProfile(
         name="llama2",
-        model_path="llama2:13b",
+        model_path="llama2:7b-chat",
         max_tokens=8192,
         temperature=0.3,
         capabilities=["research", "analysis", "long_form_writing"]
     ),
     IntentType.FACTUAL_SHORT_ANSWER: ModelProfile(
-        name="llama2",
-        model_path="llama2:7b",
+        name="phi3",
+        model_path="phi3:3.8b",
         max_tokens=2048,
         temperature=0.1,
         capabilities=["factual_qa", "summarization", "extraction"]
     ),
     IntentType.TABLE_QUERY: ModelProfile(
-        name="llama2",
-        model_path="llama2:7b",
+        name="phi3",
+        model_path="phi3:3.8b",
         max_tokens=4096,
         temperature=0.2,
         capabilities=["table_analysis", "data_extraction", "structured_output"]
     ),
     IntentType.IMAGE_ANALYSIS: ModelProfile(
-        name="llava",
-        model_path="llava:7b",
+        name="llama2",
+        model_path="llama2:7b-chat",
         max_tokens=2048,
         temperature=0.3,
         capabilities=["image_analysis", "visual_qa", "image_description"]
     ),
     IntentType.SUMMARIZE: ModelProfile(
-        name="llama2",
-        model_path="llama2:7b",
+        name="phi3",
+        model_path="phi3:3.8b",
         max_tokens=2048,
         temperature=0.2,
         capabilities=["summarization", "extraction", "condensation"]

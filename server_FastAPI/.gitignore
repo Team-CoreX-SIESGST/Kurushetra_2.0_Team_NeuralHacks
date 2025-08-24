@@ -1,21 +1,263 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual env
-.venv/
+# Virtual environments
+.env
+.venv
+env/
 venv/
 ENV/
+env.bak/
+venv.bak/
 
-# Environment
+# Environment variables & Configuration
 .env
 .env.*
+!.env.example
+!example_env.txt
+config.local.py
+settings.local.py
+*.secret
+.secrets/
 
-# VSCode
+# IDE & Editor
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+
+# Logs & Monitoring
+*.log
+logs/
+log/
+*.log.*
+app.log
+error.log
+debug.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Cache & Temporary files
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.tmp
+*.temp
+temp/
+tmp/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# AI/ML Models & Embeddings
+models/
+model_cache/
+*.bin
+*.safetensors
+*.ckpt
+*.pth
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.tar.gz
+transformers_cache/
+sentence_transformers_cache/
+huggingface_hub/
+.transformers/
+
+# Vector Database & Search Indexes
+*.faiss
+*.index
+*.ann
+vectors/
+vectordb/
+embeddings/
+indexes/
+search_indexes/
+chromadb/
+pinecone/
+data/vectordb/
+
+# File Uploads & Workspaces
+uploads/
+public/uploads/
+static/uploads/
+media/
+files/
+documents/
+# Workspace directories with user uploads
+demo-workspace/
+test-workspace/
+*-workspace/
+workspace_*/
+data/processing_status/
+*.pdf
+*.docx
+*.txt
+*.xlsx
+*.csv
+!example_files/
+!sample_data/
+
+# Redis & Background Jobs
+*.rdb
+dump.rdb
+redis-server.pid
+celery-beat-schedule
+celerybeat.pid
+
+# FastAPI specific
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+test-results/
+
+# Node.js (if any frontend components)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+package-lock.json
+yarn.lock
+
+# Docker & Deployment
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+!docker-compose.example.yml
+.docker/
+*.dockerfile
+
+# Kubernetes
+k8s/
+kubernetes/
+*.k8s.yaml
+*.k8s.yml
+!*.example.k8s.yaml
+
+# Security & Keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+keys/
+certificates/
+ssl/
+secrets/
+
+# Cloud Storage & CDN
+.aws/
+.gcp/
+.azure/
+cloudinary_cache/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+junit.xml
+test-results/
+test_results/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*_backup
+*_bak
+backup/
+backups/
+
+# Development & Debug
+debug/
+.debug/
+*.debug
+debug_*
+development_*
+
+# Large datasets & Data files (exclude user uploads but keep configs)
+data/
+dataset/
+datasets/
+large_files/
+!requirements.txt
+!package.json
+!*config*.json
+!*schema*.json
+
+# Jupyter Notebooks (if any)
+.ipynb_checkpoints/
+*.ipynb
+
+# Python package management
+Pipfile.lock
+poetry.lock
+.pdm.toml
+.pdm-build/
+__pypackages__/
+
+# Local development overrides
+local_settings.py
+development.py
+dev_config.py
+local_config.py
+
+# Custom project specific ignores
+setup_local.txt
+local_setup/
+development_notes/
+NOTES.md
+TODO.md
