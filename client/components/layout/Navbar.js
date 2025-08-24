@@ -9,31 +9,74 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Menu, X, User, LogOut, Sparkles } from "lucide-react";
 
 export function Navbar() {
-  const { user, user_info, logout, loading } = useAuth(); // Added user_info to destructuring
+  const { user, logout, loading } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [localUser, setLocalUser] = useState(null);
+  const [hasToken, setHasToken] = useState(false);
 
-  // Debug: Log the auth state
+  // Client-only setup
   useEffect(() => {
-    console.log("Auth Debug:", { user, user_info, loading });
-  }, [user, user_info, loading]);
+    setIsClient(true);
 
-  // Handle scroll effect for navbar background
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+    // Restore local user + token
+    try {
+      const userData = localStorage.getItem("user");
+      if (userData) setLocalUser(JSON.parse(userData));
+    } catch {
+      localStorage.removeItem("user");
+    }
+    setHasToken(!!localStorage.getItem("token"));
+
+    // Sync across tabs
+    const onStorage = (e) => {
+      if (e.key === "user") {
+        try {
+          const val = localStorage.getItem("user");
+          setLocalUser(val ? JSON.parse(val) : null);
+        } catch {
+          localStorage.removeItem("user");
+          setLocalUser(null);
+        }
+      }
+      if (e.key === "token") {
+        setHasToken(!!localStorage.getItem("token"));
+      }
     };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // Scroll style
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Close mobile menu on route change
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
-    }
+    if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   }, [pathname, isMobileMenuOpen]);
+
+  // When auth context user changes, mirror to localStorage
+  useEffect(() => {
+    if (!isClient) return;
+    if (user) {
+      setLocalUser(user);
+      try {
+        localStorage.setItem("user", JSON.stringify(user));
+      } catch {
+        // If storage full or blocked, at least keep in state
+      }
+      setHasToken(!!localStorage.getItem("token"));
+    } else {
+      setLocalUser((prev) => prev); // keep whatever we restored until token says otherwise
+      setHasToken(!!localStorage.getItem("token"));
+    }
+  }, [user, isClient]);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -48,10 +91,20 @@ export function Navbar() {
     exit: { opacity: 0, y: -20, transition: { duration: 0.2 } },
   };
 
-  // Use user_info if user is not available, or vice versa
-  const currentUser = user || user_info;
+  // Auth state:
+  // - If token exists, we consider the user "authenticated" for UI purposes.
+  // - Prefer live context user, then local user from storage.
+  const isAuthenticated = isClient && (hasToken || !!user || !!localUser);
+  const userInfo = user || localUser;
 
-  // Helper for creating desktop navigation links
+  // Get user initial for avatar
+  const getUserInitial = () => {
+    if (!userInfo) return "";
+    if (userInfo.name) return userInfo.name.charAt(0).toUpperCase();
+    if (userInfo.email) return userInfo.email.charAt(0).toUpperCase();
+    return "U";
+  };
+
   const createDesktopNavLinks = () =>
     navLinks.map((link) =>
       React.createElement(
@@ -69,7 +122,6 @@ export function Navbar() {
       )
     );
 
-  // Helper for creating mobile navigation links
   const createMobileNavLinks = () =>
     navLinks.map((link) =>
       React.createElement(
@@ -87,7 +139,17 @@ export function Navbar() {
       )
     );
 
-  // Main render return
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    } finally {
+      setLocalUser(null);
+      setHasToken(false);
+      logout(); // will route to /login
+    }
+  };
+
   return React.createElement(
     "nav",
     {
@@ -142,34 +204,47 @@ export function Navbar() {
           React.createElement(
             "div",
             { className: "hidden md:flex items-center space-x-3" },
-            // Only render buttons after loading is complete
             !loading &&
-              (currentUser
-                ? // Logged In state
-                  React.createElement(
+              isClient &&
+              (isAuthenticated
+                ? React.createElement(
                     React.Fragment,
                     null,
                     React.createElement(
-                      "span",
+                      "div",
                       {
-                        className: "text-sm text-slate-600 dark:text-slate-400",
+                        className: "relative group flex items-center",
                       },
-                      `Welcome, ${
-                        currentUser.name || currentUser.username || "User"
-                      }`
+                      React.createElement(
+                        "div",
+                        {
+                          className:
+                            "w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white font-medium text-sm",
+                        },
+                        getUserInitial()
+                      ),
+                      React.createElement(
+                        "div",
+                        {
+                          className:
+                            "absolute top-full right-0 mt-2 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap",
+                        },
+                        `Welcome, ${
+                          userInfo?.name || userInfo?.email || "User"
+                        }`
+                      )
                     ),
                     React.createElement(
                       "button",
                       {
-                        onClick: logout,
+                        onClick: handleLogout,
                         className:
                           "px-3 py-2 rounded-md text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-500 transition-colors",
                       },
                       React.createElement(LogOut, { className: "w-4 h-4" })
                     )
                   )
-                : // Logged Out state
-                  React.createElement(
+                : React.createElement(
                     React.Fragment,
                     null,
                     React.createElement(
@@ -192,7 +267,7 @@ export function Navbar() {
                     )
                   ))
           ),
-          // Mobile menu button
+          // Mobile toggle
           React.createElement(
             "button",
             {
@@ -232,11 +307,10 @@ export function Navbar() {
                   className:
                     "pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2",
                 },
-                // Only render buttons after loading is complete
                 !loading &&
-                  (currentUser
-                    ? // Logged In Mobile
-                      React.createElement(
+                  isClient &&
+                  (isAuthenticated
+                    ? React.createElement(
                         React.Fragment,
                         null,
                         React.createElement(
@@ -248,11 +322,9 @@ export function Navbar() {
                             "div",
                             {
                               className:
-                                "w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500",
+                                "w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white font-medium text-sm",
                             },
-                            React.createElement(User, {
-                              className: "w-4 h-4 text-white",
-                            })
+                            getUserInitial()
                           ),
                           React.createElement(
                             "span",
@@ -261,7 +333,7 @@ export function Navbar() {
                                 "font-medium text-slate-700 dark:text-slate-200",
                             },
                             `Welcome, ${
-                              currentUser.name || currentUser.username || "User"
+                              userInfo?.name || userInfo?.email || "User"
                             }`
                           )
                         ),
@@ -269,7 +341,7 @@ export function Navbar() {
                           "button",
                           {
                             onClick: () => {
-                              logout();
+                              handleLogout();
                               setIsMobileMenuOpen(false);
                             },
                             className:
@@ -281,8 +353,7 @@ export function Navbar() {
                           "Logout"
                         )
                       )
-                    : // Logged Out Mobile
-                      React.createElement(
+                    : React.createElement(
                         React.Fragment,
                         null,
                         React.createElement(
