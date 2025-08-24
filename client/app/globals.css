@@ -4,6 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Force font loading and fallbacks */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: local('Inter'), url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
@@ -208,4 +217,42 @@ html {
 /* Smooth transitions for theme switching */
 * {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-} 
+}
+
+/* Force consistent rendering across browsers */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure proper text rendering */
+body, html {
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Debug utility - uncomment to see layout boundaries */
+/*
+.debug * {
+  outline: 1px solid red !important;
+}
+.debug *:nth-child(2n) {
+  outline: 1px solid blue !important;
+}
+*/
+
+/* Ensure consistent font loading across environments */
+.font-inter {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* Fix for potential FOUC (Flash of Unstyled Content) */
+html.loading * {
+  transition: none !important;
+}
+
+/* Ensure proper height for full-screen layouts */
+html, body, #__next {
+  height: 100%;
+}

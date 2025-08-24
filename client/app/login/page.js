@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Navbar } from "@/components/layout/Navbar";
 import {
   Eye,
   EyeOff,
@@ -97,8 +98,9 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 pt-16">
       {/* Background decorative element from Hero */}
+      <Navbar/>
       <div
         className="absolute inset-0 -z-10 bg-[radial-gradient(45rem_45rem_at_50%_50%,_theme(colors.indigo.100),_transparent_80%)] dark:bg-[radial-gradient(45rem_45rem_at_50%_50%,_theme(colors.indigo.950/40%),_transparent_80%)]"
         aria-hidden="true"

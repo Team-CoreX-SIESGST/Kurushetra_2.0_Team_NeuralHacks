@@ -2,7 +2,9 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import { Toaster } from "react-hot-toast";
+import StyleDiagnostic from "@/components/debug/StyleDiagnostic";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
 const inter = Inter({ subsets: ["latin"] });
@@ -41,18 +43,21 @@ export default function RootLayout({ children }) {
             disableTransitionOnChange
           >
             <AuthProvider>
-              {children}
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
-                  },
-                }}
-              />
+              <ToastProvider>
+                {children}
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: "var(--background)",
+                      color: "var(--foreground)",
+                      border: "1px solid var(--border)",
+                    },
+                  }}
+                />
+                <StyleDiagnostic />
+              </ToastProvider>
             </AuthProvider>
           </ThemeProvider>
         </GoogleOAuthProvider>

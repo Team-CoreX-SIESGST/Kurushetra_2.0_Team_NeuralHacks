@@ -1,195 +1,191 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Navbar } from '@/components/layout/Navbar'
-import { Footer } from '@/components/layout/Footer'
-import { Mail, Phone, MapPin, Send } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+// Animation variants
+const FADE_IN_STAGGER_VARIANTS = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+    },
+  },
+};
+
+const FADE_IN_UP_VARIANTS = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
+// Reusable input component for consistent styling
+const FormInput = (props) => (
+  <input
+    {...props}
+    className="w-full bg-slate-900/50 border-0 rounded-md px-4 py-3 text-slate-300 placeholder-slate-500 ring-1 ring-inset ring-slate-100/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition"
+  />
+);
+
+const FormTextarea = (props) => (
+  <textarea
+    {...props}
+    className="w-full bg-slate-900/50 border-0 rounded-md px-4 py-3 text-slate-300 placeholder-slate-500 ring-1 ring-inset ring-slate-100/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition"
+  />
+);
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  })
-  const [loading, setLoading] = useState(false)
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
+    const { name, value } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
-    }))
-  }
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     // Simulate form submission
     setTimeout(() => {
-      toast.success('Message sent successfully! We\'ll get back to you soon.')
-      setFormData({ name: '', email: '', subject: '', message: '' })
-      setLoading(false)
-    }, 1000)
-  }
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      setFormData({ name: "", email: "", subject: "", message: "" });
+      setLoading(false);
+    }, 1000);
+  };
+
+  const contactInfo = [
+    {
+      icon: Mail,
+      title: "Email",
+      content: "support@hackathontemplate.com",
+    },
+    {
+      icon: Phone,
+      title: "Phone",
+      content: "+1 (555) 123-4567",
+    },
+    {
+      icon: MapPin,
+      title: "Address",
+      content: "123 Hackathon Street, Tech City, USA",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="bg-slate-950 text-white">
       <Navbar />
-      <main className="py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      <main className="relative overflow-hidden py-16 sm:py-20">
+        <div
+          className="absolute inset-0 -z-10 bg-[radial-gradient(45rem_45rem_at_50%_50%,_theme(colors.indigo.950/40%),_theme(colors.slate.950))]"
+          aria-hidden="true"
+        />
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={FADE_IN_STAGGER_VARIANTS}
+          className="max-w-7xl mx-auto px-6 lg:px-8 space-y-20 sm:space-y-24"
+        >
+          {/* Hero Section */}
+          <motion.div variants={FADE_IN_UP_VARIANTS} className="text-center">
+            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100/5 ring-1 ring-inset ring-slate-100/10 mb-8 backdrop-blur-lg">
+              <Mail className="w-4 h-4 text-indigo-400 mr-2" />
+              <span className="text-sm font-medium text-slate-300">
+                We're Here to Help
+              </span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-6">
               Contact Us
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Get in touch with us for any questions or support
+            <p className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto">
+              Have a question, comment, or concern? Drop us a line and we'll get
+              back to you as soon as possible.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Contact Grid */}
+          <motion.div
+            variants={FADE_IN_UP_VARIANTS}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-16 items-start"
+          >
             {/* Contact Information */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Get in Touch
-              </h2>
-              <div className="space-y-6">
-                <div className="flex items-start">
+            <div className="space-y-8">
+              {contactInfo.map((item, index) => (
+                <div key={index} className="flex items-start space-x-5">
                   <div className="flex-shrink-0">
-                    <Mail className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-slate-100/5 ring-1 ring-inset ring-slate-100/10 rounded-lg flex items-center justify-center">
+                      <item.icon className="w-6 h-6 text-indigo-400" />
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Email
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-100">
+                      {item.title}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      support@hackathontemplate.com
-                    </p>
+                    <p className="mt-1 text-slate-400">{item.content}</p>
                   </div>
                 </div>
-
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <Phone className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Phone
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      +1 (555) 123-4567
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Address
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      123 Hackathon Street<br />
-                      Tech City, TC 12345<br />
-                      United States
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                  Office Hours
-                </h3>
-                <div className="space-y-2 text-gray-600 dark:text-gray-400">
-                  <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
-                  <p>Saturday: 10:00 AM - 4:00 PM</p>
-                  <p>Sunday: Closed</p>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Contact Form */}
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            <div className="bg-slate-100/5 p-8 rounded-2xl ring-1 ring-inset ring-slate-100/10">
+              <h2 className="text-2xl font-bold text-white mb-6">
                 Send us a Message
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Your name"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="your.email@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    required
-                    value={formData.subject}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="What's this about?"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={6}
-                    required
-                    value={formData.message}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Tell us more about your inquiry..."
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <FormInput
+                  type="text"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Your name"
+                />
+                <FormInput
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your.email@example.com"
+                />
+                <FormInput
+                  type="text"
+                  name="subject"
+                  required
+                  value={formData.subject}
+                  onChange={handleChange}
+                  placeholder="What's this about?"
+                />
+                <FormTextarea
+                  name="message"
+                  rows={5}
+                  required
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Tell us more about your inquiry..."
+                />
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-slate-900 bg-white rounded-full hover:bg-slate-200 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
-                    <div className="spinner"></div>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
@@ -199,10 +195,10 @@ export default function ContactPage() {
                 </button>
               </form>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </main>
       <Footer />
     </div>
-  )
-} 
+  );
+}
