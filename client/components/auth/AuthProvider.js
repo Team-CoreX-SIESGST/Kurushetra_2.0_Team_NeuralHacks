@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { registerUser } from '@/services/auth/authServices'
 
 const AuthContext = createContext()
 
@@ -65,21 +66,8 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        return { success: true, message: data.message }
-      } else {
-        return { success: false, error: data.message }
-      }
+      const response = await registerUser(userData)
+      console.log(response);
     } catch (error) {
       return { success: false, error: 'Registration failed' }
     }

@@ -5,7 +5,7 @@ export const getTrendingProducts = async () => {
   return response.data;
 };
 
-export const add_feedback = (data) => {
-  return apiClient.post("/feedback/save", data);
+export const registerUser = (data) => {
+  return apiClient.post("/users/create", data);
 };
 
