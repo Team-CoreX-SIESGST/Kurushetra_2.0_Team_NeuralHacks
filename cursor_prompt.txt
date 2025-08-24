@@ -1,0 +1,65 @@
+# OmniSearch AI — Project Summary
+
+**OmniSearch AI** is an AI-powered, multi-modal search and summarization system.  
+It ingests **user-provided files** (PDF, CSV, DOCX, images, etc.), combines them with **live web results**, routes tasks to the most appropriate **local or hosted LLMs via Ollama**, and produces **concise, provenance-backed answers**.
+
+---
+
+## Core Flow
+1. **User Input**: User uploads files + enters a natural language query.  
+2. **Ingestion & Indexing**: Files are parsed (PDF, CSV, image OCR), chunked, embedded, and stored in a **vector database**.  
+3. **Model Routing**: An orchestrator decides which model to use based on intent (e.g., code → Claude/local LLaMA, research → GPT/ChatGPT, factual short answers → Mistral). Routing uses a **deterministic table** with an LLM fallback.  
+4. **Retrieval + Web Enrichment**: Relevant chunks retrieved from the vector DB, combined with web search results (SerpAPI/Bing).  
+5. **Reranking**: Candidate results reranked using **Hugging Face cross-encoder** models for semantic relevance.  
+6. **Summarization**: Context passed into a summarizer (Ollama local model → LLaMA/Mistral, with OpenAI fallback).  
+   - Strict **RAG discipline**: Only provided snippets can be used.  
+   - Output always cites sources (`SRC_n`).  
+   - If insufficient evidence → returns `"INSUFFICIENT_EVIDENCE"`.  
+7. **Output**: API returns structured JSON containing:
+   - `answer` (summary or code if requested)  
+   - `confidence` score  
+   - `sources` (with quotes + provenance)  
+   - optional `code` block  
+
+---
+
+## Features
+- 🔍 **Multi-modal ingestion**: PDF, CSV, text, images.  
+- ⚡ **Hybrid retrieval**: Vector DB + live web search.  
+- 🧠 **Smart routing**: Model chosen based on intent (coding, research, factual QA, summarization).  
+- 📑 **Provenance enforcement**: Every answer cites document pages or URLs.  
+- 🤝 **Summarized + actionable output**: Users get concise answers, code snippets, or structured summaries.  
+- 🛠️ **Extensible**: Modular backend services (embeddings, reranker, summarizer, router, web search).  
+- 🌐 **Web-first API**: Built on FastAPI with documented endpoints.
+
+---
+
+## Tech Stack
+- **Frontend**: React (separate repo, not modified here).  
+- **Backend**: FastAPI, Redis + RQ (tasks), FAISS/Pinecone (vector DB).  
+- **AI Models**:
+  - Embeddings: `sentence-transformers/all-mpnet-base-v2` (MiniLM fallback).  
+  - Reranker: Hugging Face `cross-encoder/ms-marco-MiniLM-L-6-v2`.  
+  - Summarization/QA: Local Ollama models (`mistral`, `r1`, quantized LLaMA) + optional OpenAI fallback.  
+- **Web Search**: SerpAPI / Bing API.  
+- **Storage**: S3/MinIO for file persistence.  
+
+---
+
+## Business Model
+- **Free tier**: Limited file size, capped queries/day, uses smaller local models.  
+- **Pro tier (subscription)**: Higher limits, faster responses, larger context, premium models (Claude, GPT-4).  
+- **Enterprise tier**: Private deployments, team-based workspaces, compliance features (SOC2, HIPAA-ready).  
+
+---
+
+## Value Proposition
+- **Researchers**: Search across papers, data, and web at once.  
+- **Developers**: Get contextualized code snippets + references.  
+- **Businesses**: Unified knowledge retrieval across docs, reports, and web sources.  
+- **Education**: Students summarize and learn from diverse formats with sources cited.
+
+---
+
+## Vision
+A **universal AI research assistant** that combines local efficiency (via Ollama), scalable vector search, and multi-source summarization into a single API-driven product.
