@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { Menu, X, User, LogOut, Sparkles } from "lucide-react";
+import { Menu, X, User, LogOut, Sparkles, ChevronDown } from "lucide-react";
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
@@ -16,6 +16,8 @@ export function Navbar() {
   const [isClient, setIsClient] = useState(false);
   const [localUser, setLocalUser] = useState(null);
   const [hasToken, setHasToken] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
 
   // Client-only setup
   useEffect(() => {
@@ -61,6 +63,23 @@ export function Navbar() {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   }, [pathname, isMobileMenuOpen]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // When auth context user changes, mirror to localStorage
   useEffect(() => {
     if (!isClient) return;
@@ -89,6 +108,22 @@ export function Navbar() {
     hidden: { opacity: 0, y: -20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
     exit: { opacity: 0, y: -20, transition: { duration: 0.2 } },
+  };
+
+  const dropdownVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: -10 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.15, ease: "easeOut" },
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.95,
+      y: -10,
+      transition: { duration: 0.1, ease: "easeIn" },
+    },
   };
 
   // Auth state:
@@ -146,8 +181,13 @@ export function Navbar() {
     } finally {
       setLocalUser(null);
       setHasToken(false);
+      setIsProfileDropdownOpen(false);
       logout(); // will route to /login
     }
+  };
+
+  const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
   return React.createElement(
@@ -208,40 +248,102 @@ export function Navbar() {
               isClient &&
               (isAuthenticated
                 ? React.createElement(
-                    React.Fragment,
-                    null,
-                    React.createElement(
-                      "div",
-                      {
-                        className: "relative group flex items-center",
-                      },
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white font-medium text-sm",
-                        },
-                        getUserInitial()
-                      ),
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "absolute top-full right-0 mt-2 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap",
-                        },
-                        `Welcome, ${
-                          userInfo?.name || userInfo?.email || "User"
-                        }`
-                      )
-                    ),
+                    "div",
+                    {
+                      className: "relative",
+                      ref: profileDropdownRef,
+                    },
+                    // Profile Avatar Button
                     React.createElement(
                       "button",
                       {
-                        onClick: handleLogout,
+                        onClick: toggleProfileDropdown,
                         className:
-                          "px-3 py-2 rounded-md text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-500 transition-colors",
+                          "flex items-center space-x-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group",
+                        "aria-label": "Profile menu",
                       },
-                      React.createElement(LogOut, { className: "w-4 h-4" })
+                      React.createElement(
+                        "div",
+                        {
+                          className:
+                            "w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white font-medium text-sm ring-2 ring-white dark:ring-slate-900 group-hover:ring-slate-200 dark:group-hover:ring-slate-700 transition-all",
+                        },
+                        getUserInitial()
+                      ),
+                      React.createElement(ChevronDown, {
+                        className: `w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${
+                          isProfileDropdownOpen ? "rotate-180" : ""
+                        }`,
+                      })
+                    ),
+                    // Dropdown Menu
+                    React.createElement(
+                      AnimatePresence,
+                      null,
+                      isProfileDropdownOpen &&
+                        React.createElement(
+                          motion.div,
+                          {
+                            variants: dropdownVariants,
+                            initial: "hidden",
+                            animate: "visible",
+                            exit: "exit",
+                            className:
+                              "absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg ring-1 ring-slate-200 dark:ring-slate-700 py-1 z-50",
+                          },
+                          // User Info Header
+                          React.createElement(
+                            "div",
+                            {
+                              className:
+                                "px-4 py-3 border-b border-slate-200 dark:border-slate-700",
+                            },
+                            React.createElement(
+                              "p",
+                              {
+                                className:
+                                  "text-sm font-medium text-slate-900 dark:text-slate-100 truncate",
+                              },
+                              userInfo?.name || "User"
+                            ),
+                            React.createElement(
+                              "p",
+                              {
+                                className:
+                                  "text-xs text-slate-500 dark:text-slate-400 truncate",
+                              },
+                              userInfo?.email || ""
+                            )
+                          ),
+                          // Profile Link
+                          React.createElement(
+                            Link,
+                            {
+                              href: "/profile",
+                              className:
+                                "flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
+                              onClick: () => setIsProfileDropdownOpen(false),
+                            },
+                            React.createElement(User, {
+                              className:
+                                "w-4 h-4 mr-3 text-slate-500 dark:text-slate-400",
+                            }),
+                            "Profile"
+                          ),
+                          // Logout Button
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: handleLogout,
+                              className:
+                                "w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors",
+                            },
+                            React.createElement(LogOut, {
+                              className: "w-4 h-4 mr-3",
+                            }),
+                            "Logout"
+                          )
+                        )
                     )
                   )
                 : React.createElement(
@@ -327,15 +429,38 @@ export function Navbar() {
                             getUserInitial()
                           ),
                           React.createElement(
-                            "span",
-                            {
-                              className:
-                                "font-medium text-slate-700 dark:text-slate-200",
-                            },
-                            `Welcome, ${
-                              userInfo?.name || userInfo?.email || "User"
-                            }`
+                            "div",
+                            { className: "flex-1" },
+                            React.createElement(
+                              "p",
+                              {
+                                className:
+                                  "font-medium text-slate-900 dark:text-slate-100 text-sm",
+                              },
+                              userInfo?.name || "User"
+                            ),
+                            React.createElement(
+                              "p",
+                              {
+                                className:
+                                  "text-xs text-slate-500 dark:text-slate-400",
+                              },
+                              userInfo?.email || ""
+                            )
                           )
+                        ),
+                        React.createElement(
+                          Link,
+                          {
+                            href: "/profile",
+                            className:
+                              "flex items-center px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-900/5 dark:hover:bg-slate-100/5 transition-colors",
+                            onClick: () => setIsMobileMenuOpen(false),
+                          },
+                          React.createElement(User, {
+                            className: "w-5 h-5 mr-2",
+                          }),
+                          "Profile"
                         ),
                         React.createElement(
                           "button",
