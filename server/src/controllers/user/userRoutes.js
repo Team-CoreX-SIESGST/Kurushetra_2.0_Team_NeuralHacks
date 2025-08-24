@@ -10,7 +10,7 @@ userRoute.get("/", (req, res) => {
     res.send("User details fetched");
 });
 
-userRoute.post("/create", upload.fields([{ name: "image", maxCount: 1 }]), createUser); // signup
+userRoute.post("/create", createUser); // signup
 userRoute.post("/login", loginUser); // login
 
 userRoute.patch("/details", (req, res) => {

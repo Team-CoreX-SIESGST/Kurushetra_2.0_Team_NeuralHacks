@@ -6,7 +6,7 @@ import { asyncHandler,uploadOnCloudinary,deleteOnCloudinary,statusType,sendRespo
 // Token generator functions
 const generateAccessToken = (user) => {
     return jwt.sign(
-        { user_id: user._id, role: user.role },
+        { user_id: user._id, date_of_birth: user.date_of_birth },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: "1d" }
     );
@@ -16,7 +16,7 @@ const generateRefreshToken = (user) => {
     return jwt.sign(
         {
             user_id: user._id,
-            role: user.role,
+            date_of_birth: user.date_of_birth,
             token_version: user.token_version || 0,
         },
         process.env.REFRESH_TOKEN_SECRET,
@@ -31,16 +31,15 @@ const cookieOptions = {
 };
 
 export const createUser = asyncHandler(async (req, res) => {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) {
+    const { name, email, password, date_of_birth,image } = req.body;
+    if (!name || !email || !password ) {
         return sendResponse(res, false, null, "Fields cannot be empty", statusType.BAD_REQUEST);
     }
-    let image = null;
-    if (req.files && req.files.image) {
-        const avatarLocalPath = req.files.image[0].path;
-        const image_temp = await uploadOnCloudinary(avatarLocalPath, { secure: true });
-        image = image_temp?.secure_url;
-    }
+    // if (req.files && req.files.image) {
+    //     const avatarLocalPath = req.files.image[0].path;
+    //     const image_temp = await uploadOnCloudinary(avatarLocalPath, { secure: true });
+    //     image = image_temp?.secure_url;
+    // }
 
     let user = await User.findOne({ email });
     if (user) {
@@ -51,7 +50,7 @@ export const createUser = asyncHandler(async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Save User
-    user = await User.create({ name, email, password: hashedPassword, role, image });
+    user = await User.create({ name, email, password: hashedPassword, date_of_birth, image });
 
     // Generate Tokens
     const accessToken = generateAccessToken(user);
@@ -63,8 +62,8 @@ export const createUser = asyncHandler(async (req, res) => {
 
     // Prepare response
     const userData = user.toObject();
-    delete userData.pin;
-    delete userData.refresh_token;
+    delete userData.password;
+    // delete userData.refresh_token;
 
     return sendResponse(res, true,userData,"User registered successfully",statusType.CREATED);
 });
@@ -94,7 +93,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 
     const userData = user.toObject();
     delete userData.password;
-    delete userData.refresh_token;
+    // delete userData.refresh_token;
 
     return sendResponse(res,true,userData,"Login Successful",statusType.OK)
 });

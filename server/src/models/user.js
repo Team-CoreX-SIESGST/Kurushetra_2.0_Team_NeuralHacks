@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
             required: true,
             trim: true
         },
-        email:{
+        email: {
             type: String,
             required: true,
             unique: true,
@@ -17,11 +17,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true
         },
-        role: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Role",
-            required: true
-        },
+        // role: {
+        //     type: mongoose.Schema.Types.ObjectId,
+        //     ref: "Role",
+        //     required: true
+        // },
         image: {
             type: String,
             default: null
@@ -31,14 +31,18 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        created_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        },
-        updated_by: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
+        date_of_birth: {
+            type: String,
+            default: null
         }
+        // created_by: {
+        //     type: mongoose.Schema.Types.ObjectId,
+        //     ref: "User"
+        // },
+        // updated_by: {
+        //     type: mongoose.Schema.Types.ObjectId,
+        //     ref: "User"
+        // }
     },
     { timestamps: true }
 );
