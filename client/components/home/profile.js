@@ -4,20 +4,24 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/auth/AuthProvider";
-import AuthRequired from "@/components/auth/AuthRequired"; // The new component is imported
 import {
   Settings,
   User,
   MessageSquare,
+  Zap,
   Shield,
+  Palette,
   Volume2,
   Bell,
   Save,
   RotateCcw,
+  Moon,
+  Sun,
   Monitor,
   ChevronRight,
   ArrowLeft,
   Sparkles,
+  Camera,
   Upload,
   Check,
   AlertCircle,
@@ -39,6 +43,12 @@ export default function ProfilePage() {
     conversationMemory: true,
     autoSave: true,
 
+    // Appearance
+    theme: "system",
+    fontSize: "medium",
+    chatBubbleStyle: "modern",
+    showTimestamps: true,
+
     // Privacy & Security
     dataRetention: "30days",
     analyticsEnabled: false,
@@ -58,9 +68,11 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Client-side initialization
+  // Client-side initialization - matching navbar pattern
   useEffect(() => {
     setIsClient(true);
+
+    // Restore local user + token
     try {
       const userData = localStorage.getItem("user");
       if (userData) {
@@ -77,6 +89,7 @@ export default function ProfilePage() {
     }
     setHasToken(!!localStorage.getItem("token"));
 
+    // Sync across tabs
     const onStorage = (e) => {
       if (e.key === "user") {
         try {
@@ -103,7 +116,7 @@ export default function ProfilePage() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Sync with auth context
+  // When auth context user changes, mirror to localStorage - matching navbar pattern
   useEffect(() => {
     if (!isClient) return;
     if (user) {
@@ -115,17 +128,21 @@ export default function ProfilePage() {
       }));
       try {
         localStorage.setItem("user", JSON.stringify(user));
-      } catch {}
+      } catch {
+        // If storage full or blocked, at least keep in state
+      }
       setHasToken(!!localStorage.getItem("token"));
     } else {
-      setLocalUser((prev) => prev);
+      setLocalUser((prev) => prev); // keep whatever we restored until token says otherwise
       setHasToken(!!localStorage.getItem("token"));
     }
   }, [user, isClient]);
 
+  // Auth state - matching navbar pattern
   const isAuthenticated = isClient && (hasToken || !!user || !!localUser);
   const userInfo = user || localUser;
 
+  // Get user initial for avatar - matching navbar pattern
   const getUserInitial = () => {
     if (!userInfo && !settings.username) return "U";
     const displayName = userInfo?.name || settings.username;
@@ -145,7 +162,10 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API
+      // Save settings logic here - you can integrate with your backend
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+
+      // Update localStorage user data if profile settings changed
       if (userInfo || isAuthenticated) {
         try {
           const updatedUser = {
@@ -155,8 +175,11 @@ export default function ProfilePage() {
           };
           localStorage.setItem("user", JSON.stringify(updatedUser));
           setLocalUser(updatedUser);
-        } catch {}
+        } catch {
+          // Handle error
+        }
       }
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
@@ -178,6 +201,10 @@ export default function ProfilePage() {
         systemPrompt: "You are a helpful AI assistant.",
         conversationMemory: true,
         autoSave: true,
+        theme: "system",
+        fontSize: "medium",
+        chatBubbleStyle: "modern",
+        showTimestamps: true,
         dataRetention: "30days",
         analyticsEnabled: false,
         shareConversations: false,
@@ -195,6 +222,7 @@ export default function ProfilePage() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Handle file upload logic here
       console.log("Uploading file:", file);
     }
   };
@@ -202,16 +230,21 @@ export default function ProfilePage() {
   const sections = [
     { id: "profile", label: "Profile", icon: User },
     { id: "chat", label: "Chat Settings", icon: MessageSquare },
+    { id: "appearance", label: "Appearance", icon: Palette },
     { id: "privacy", label: "Privacy & Security", icon: Shield },
     { id: "notifications", label: "Notifications", icon: Bell },
   ];
 
+  // Animation variants matching navbar style
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3, staggerChildren: 0.1 },
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.1,
+      },
     },
   };
 
@@ -239,6 +272,7 @@ export default function ProfilePage() {
           placeholder="Enter your username"
         />
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           Email
@@ -251,6 +285,7 @@ export default function ProfilePage() {
           placeholder="Enter your email"
         />
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           Profile Picture
@@ -305,6 +340,7 @@ export default function ProfilePage() {
           <option value="gemini-pro">Gemini Pro</option>
         </select>
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           Temperature:{" "}
@@ -335,6 +371,7 @@ export default function ProfilePage() {
           <span>Creative</span>
         </div>
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           Max Tokens
@@ -350,6 +387,7 @@ export default function ProfilePage() {
           className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
         />
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           System Prompt
@@ -362,8 +400,8 @@ export default function ProfilePage() {
           placeholder="Define how the AI should behave..."
         />
       </motion.div>
+
       <motion.div variants={itemVariants} className="space-y-4">
-        {/* Toggle Switches */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -385,6 +423,7 @@ export default function ProfilePage() {
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
+
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -400,6 +439,97 @@ export default function ProfilePage() {
               checked={settings.autoSave}
               onChange={(e) =>
                 handleSettingChange("autoSave", e.target.checked)
+              }
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </label>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  const renderAppearanceSettings = () => (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <motion.div variants={itemVariants}>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+          Theme
+        </label>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: "light", label: "Light", icon: Sun },
+            { value: "dark", label: "Dark", icon: Moon },
+            { value: "system", label: "System", icon: Monitor },
+          ].map((theme) => (
+            <button
+              key={theme.value}
+              onClick={() => handleSettingChange("theme", theme.value)}
+              className={`p-4 rounded-lg border-2 flex flex-col items-center space-y-2 transition-all duration-200 hover:scale-105 ${
+                settings.theme === theme.value
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 shadow-lg shadow-indigo-500/20"
+                  : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <theme.icon className="w-5 h-5" />
+              <span className="text-sm font-medium">{theme.label}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          Font Size
+        </label>
+        <select
+          value={settings.fontSize}
+          onChange={(e) => handleSettingChange("fontSize", e.target.value)}
+          className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+        >
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          Chat Bubble Style
+        </label>
+        <select
+          value={settings.chatBubbleStyle}
+          onChange={(e) =>
+            handleSettingChange("chatBubbleStyle", e.target.value)
+          }
+          className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+        >
+          <option value="modern">Modern</option>
+          <option value="classic">Classic</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Show Timestamps
+            </label>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Display message timestamps
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.showTimestamps}
+              onChange={(e) =>
+                handleSettingChange("showTimestamps", e.target.checked)
               }
               className="sr-only peer"
             />
@@ -433,8 +563,8 @@ export default function ProfilePage() {
           <option value="never">Never delete</option>
         </select>
       </motion.div>
+
       <motion.div variants={itemVariants} className="space-y-4">
-        {/* Toggle Switches */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -456,6 +586,7 @@ export default function ProfilePage() {
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
+
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -478,6 +609,7 @@ export default function ProfilePage() {
           </label>
         </div>
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4">
           <div className="flex items-start space-x-3">
@@ -496,6 +628,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </motion.div>
+
       <motion.div variants={itemVariants}>
         <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg p-4">
           <div className="flex items-start space-x-3">
@@ -525,7 +658,6 @@ export default function ProfilePage() {
       className="space-y-6"
     >
       <motion.div variants={itemVariants} className="space-y-4">
-        {/* Toggle Switches */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-3">
             <Volume2 className="w-5 h-5 text-slate-500 dark:text-slate-400" />
@@ -550,6 +682,7 @@ export default function ProfilePage() {
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
+
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-3">
             <Monitor className="w-5 h-5 text-slate-500 dark:text-slate-400" />
@@ -574,6 +707,7 @@ export default function ProfilePage() {
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
+
         <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-3">
             <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400" />
@@ -608,6 +742,8 @@ export default function ProfilePage() {
         return renderProfileSettings();
       case "chat":
         return renderChatSettings();
+      case "appearance":
+        return renderAppearanceSettings();
       case "privacy":
         return renderPrivacySettings();
       case "notifications":
@@ -617,6 +753,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Don't render until client-side to prevent hydration mismatch
   if (!isClient) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
@@ -625,15 +762,34 @@ export default function ProfilePage() {
     );
   }
 
-  // Use the reusable component for the unauthenticated state
+  // Redirect to login if not authenticated
   if (!loading && !isAuthenticated) {
     return (
-      <AuthRequired message="You need to be logged in to access your profile settings." />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+            Authentication Required
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            You need to be logged in to access your profile settings.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium"
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      {/* Header - matching navbar style */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
@@ -656,6 +812,7 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
+
             <div className="flex items-center space-x-3">
               <AnimatePresence>
                 {saveSuccess && (
@@ -670,6 +827,7 @@ export default function ProfilePage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
               <button
                 onClick={handleReset}
                 className="flex items-center space-x-2 px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
@@ -677,6 +835,7 @@ export default function ProfilePage() {
                 <RotateCcw className="w-4 h-4" />
                 <span>Reset</span>
               </button>
+
               <button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -698,8 +857,10 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
+          {/* Sidebar - matching navbar dropdown style */}
           <div className="w-72 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200/80 dark:border-slate-800/80 p-6 h-fit sticky top-24">
             <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-medium text-lg ring-2 ring-white dark:ring-slate-900">
@@ -714,6 +875,7 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
+
             <nav className="space-y-1">
               {sections.map((section, index) => (
                 <motion.button
@@ -749,6 +911,8 @@ export default function ProfilePage() {
               ))}
             </nav>
           </div>
+
+          {/* Main Content */}
           <div className="flex-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200/80 dark:border-slate-800/80 p-8">
             <div className="mb-8">
               <div className="flex items-center space-x-3 mb-2">
@@ -768,12 +932,15 @@ export default function ProfilePage() {
                   "Manage your personal information and profile settings"}
                 {activeSection === "chat" &&
                   "Configure AI model settings and conversation preferences"}
+                {activeSection === "appearance" &&
+                  "Customize the look and feel of your interface"}
                 {activeSection === "privacy" &&
                   "Control your data privacy and security settings"}
                 {activeSection === "notifications" &&
                   "Manage your notification preferences"}
               </p>
             </div>
+
             <motion.div
               key={activeSection}
               initial={{ opacity: 0, y: 10 }}
