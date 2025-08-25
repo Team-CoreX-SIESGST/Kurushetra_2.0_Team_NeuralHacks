@@ -68,13 +68,13 @@ export const sendMessage = asyncHandler(async (req, res) => {
     }
 
     // Get previous messages for context
-    const previousChats = await Chat.find({ section: sectionId }).sort({ createdAt: 1 }).limit(10); // Limit context to last 10 messages
+    // const previousChats = await Chat.find({ section: sectionId }).sort({ createdAt: 1 }).limit(10); // Limit context to last 10 messages
 
     // Format previous messages for the AI
-    const previousContext = previousChats.map((chat) => ({
-        role: chat.isUser ? "user" : "model",
-        parts: [{ text: chat.message }]
-    }));
+    // const previousContext = previousChats.map((chat) => ({
+    //     role: chat.isUser ? "user" : "model",
+    //     parts: [{ text: chat.message }]
+    // }));
 
     // Save user message
     const userChat = await Chat.create({
@@ -87,7 +87,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     await Section.findByIdAndUpdate(sectionId, { updatedAt: new Date() });
 
     // Get AI response with context
-    const aiResponse = await getAIResponse(message, previousContext, processedFiles);
+    const aiResponse = processedFiles;
 
     // Save AI response
     const aiChat = await Chat.create({

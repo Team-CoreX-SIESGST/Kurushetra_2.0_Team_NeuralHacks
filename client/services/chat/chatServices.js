@@ -36,3 +36,14 @@ export const python_pdf_to_text = (file) => {
   });
 };
 
+
+export const message_python = (file) => {
+  const formData = new FormData();
+  formData.append("file", file); // name must match FastAPI param
+
+  return apiClient2.post("/process-and-summarize-with-urls", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
