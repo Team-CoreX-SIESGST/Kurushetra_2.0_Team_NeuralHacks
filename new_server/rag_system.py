@@ -10,7 +10,7 @@ from web_search import WebSearchEngine
 class RAGSystem:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
         self.web_search_engine = WebSearchEngine()
         
         if not self.api_key:
@@ -65,6 +65,11 @@ class RAGSystem:
                 self._create_analysis_prompt(context)
             )
             
+            # 6. Content Categorization for Web Search
+            content_categories = await self._call_gemini_api(
+                self._create_categorization_prompt(context)
+            )
+            
             return {
                 "summaries": summaries,
                 "metadata": {
@@ -94,9 +99,20 @@ class RAGSystem:
             # Get context for web search
             context = self._prepare_context(extracted_data)
             
-            # Find related web URLs
+            # Generate content categorization for better web search
+            ai_categories = None
+            try:
+                content_categories_response = await self._call_gemini_api(
+                    self._create_categorization_prompt(context)
+                )
+                # Parse AI categories from JSON response
+                ai_categories = json.loads(content_categories_response)
+            except Exception as e:
+                print(f"Failed to get AI categories: {str(e)}")
+            
+            # Find related web URLs using AI categories
             web_search_result = await self.web_search_engine.find_relevant_urls(
-                context, extracted_data, max_urls=10
+                context, extracted_data, max_urls=10, ai_categories=ai_categories
             )
             
             # Add web search results to the summary
@@ -243,6 +259,33 @@ class RAGSystem:
         3. Key themes or patterns identified
         4. Potential use cases or applications
         5. Recommendations for further action
+        """
+    
+    def _create_categorization_prompt(self, context: str) -> str:
+        """Create prompt for content categorization for web search"""
+        return f"""
+        Analyze the following content and categorize it for web resource discovery. 
+        Respond ONLY with a JSON object containing relevant domains, topics, and search terms.
+        
+        {context}
+        
+        Return a JSON object with this exact structure:
+        {{
+            "primary_domains": ["domain1", "domain2", "domain3"],
+            "topics": ["topic1", "topic2", "topic3", "topic4", "topic5"],
+            "search_terms": ["search_term1", "search_term2", "search_term3"],
+            "academic_fields": ["field1", "field2"],
+            "tools_technologies": ["tool1", "tool2", "tool3"]
+        }}
+        
+        Guidelines:
+        - primary_domains: Broad categories like "artificial_intelligence", "data_science", "finance", "healthcare", "marketing", "software_engineering", "research", etc.
+        - topics: Specific topics within those domains
+        - search_terms: Key terms that would yield good web search results
+        - academic_fields: Related academic disciplines
+        - tools_technologies: Specific tools, libraries, platforms, or technologies mentioned or relevant
+        
+        Example domains: artificial_intelligence, machine_learning, data_science, natural_language_processing, computer_vision, cybersecurity, blockchain, cloud_computing, software_engineering, web_development, mobile_development, database_management, business_analytics, finance, healthcare, education, marketing, psychology, biology, chemistry, physics, mathematics, statistics, economics, management, etc.
         """
     
     def _is_technical_content(self, extracted_data: Dict[str, Any]) -> bool:

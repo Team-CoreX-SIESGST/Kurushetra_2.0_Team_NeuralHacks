@@ -177,8 +177,37 @@ def process_file_with_summary(uploaded_file):
                 
                 if "error" in summary:
                     st.warning("⚠️ AI Summary unavailable - using fallback")
+                    st.error(f"Error: {summary.get('error', 'Unknown error')}")
+                    
                     fallback = summary.get("fallback_summary", {})
-                    st.json(fallback)
+                    if fallback:
+                        st.subheader("📋 Basic File Information")
+                        
+                        # Display fallback info in a more user-friendly way
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Type", fallback.get('type', 'Unknown'))
+                        with col2:
+                            st.metric("Content Type", fallback.get('content_type', 'Unknown'))
+                        with col3:
+                            basic_info = fallback.get('basic_info', {})
+                            if 'total_pages' in basic_info:
+                                st.metric("Total Pages", basic_info['total_pages'])
+                            elif 'total_rows' in basic_info:
+                                st.metric("Total Rows", basic_info['total_rows'])
+                            elif 'total_lines' in basic_info:
+                                st.metric("Total Lines", basic_info['total_lines'])
+                        
+                        # Show detailed fallback info in expandable section
+                        with st.expander("📊 View Detailed Fallback Information"):
+                            # Properly format and display the JSON
+                            try:
+                                import json
+                                formatted_json = json.dumps(fallback, indent=2, ensure_ascii=False)
+                                st.code(formatted_json, language="json")
+                            except Exception as e:
+                                st.error(f"Error formatting fallback data: {e}")
+                                st.write(fallback)
                 else:
                     summaries = summary.get("summaries", {})
                     
@@ -251,8 +280,37 @@ def process_file_with_summary_and_urls(uploaded_file):
                 
                 if "error" in summary_data:
                     st.warning("⚠️ AI Summary unavailable - using fallback")
+                    st.error(f"Error: {summary_data.get('error', 'Unknown error')}")
+                    
                     fallback = summary_data.get("fallback_summary", {})
-                    st.json(fallback)
+                    if fallback:
+                        st.subheader("📋 Basic File Information")
+                        
+                        # Display fallback info in a more user-friendly way
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Type", fallback.get('type', 'Unknown'))
+                        with col2:
+                            st.metric("Content Type", fallback.get('content_type', 'Unknown'))
+                        with col3:
+                            basic_info = fallback.get('basic_info', {})
+                            if 'total_pages' in basic_info:
+                                st.metric("Total Pages", basic_info['total_pages'])
+                            elif 'total_rows' in basic_info:
+                                st.metric("Total Rows", basic_info['total_rows'])
+                            elif 'total_lines' in basic_info:
+                                st.metric("Total Lines", basic_info['total_lines'])
+                        
+                        # Show detailed fallback info in expandable section
+                        with st.expander("📊 View Detailed Fallback Information"):
+                            # Properly format and display the JSON
+                            try:
+                                import json
+                                formatted_json = json.dumps(fallback, indent=2, ensure_ascii=False)
+                                st.code(formatted_json, language="json")
+                            except Exception as e:
+                                st.error(f"Error formatting fallback data: {e}")
+                                st.write(fallback)
                 else:
                     # Create tabs for summaries and web resources
                     tab_names = []
@@ -429,8 +487,37 @@ def json_summarizer_tab():
                         
                         if "error" in summary:
                             st.warning("⚠️ AI Summary unavailable - using fallback")
+                            st.error(f"Error: {summary.get('error', 'Unknown error')}")
+                            
                             fallback = summary.get("fallback_summary", {})
-                            st.json(fallback)
+                            if fallback:
+                                st.subheader("📋 Basic File Information")
+                                
+                                # Display fallback info in a more user-friendly way
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Type", fallback.get('type', 'Unknown'))
+                                with col2:
+                                    st.metric("Content Type", fallback.get('content_type', 'Unknown'))
+                                with col3:
+                                    basic_info = fallback.get('basic_info', {})
+                                    if 'total_pages' in basic_info:
+                                        st.metric("Total Pages", basic_info['total_pages'])
+                                    elif 'total_rows' in basic_info:
+                                        st.metric("Total Rows", basic_info['total_rows'])
+                                    elif 'total_lines' in basic_info:
+                                        st.metric("Total Lines", basic_info['total_lines'])
+                                
+                                # Show detailed fallback info in expandable section
+                                with st.expander("📊 View Detailed Fallback Information"):
+                                    # Properly format and display the JSON
+                                    try:
+                                        import json
+                                        formatted_json = json.dumps(fallback, indent=2, ensure_ascii=False)
+                                        st.code(formatted_json, language="json")
+                                    except Exception as e:
+                                        st.error(f"Error formatting fallback data: {e}")
+                                        st.write(fallback)
                         else:
                             summaries = summary.get("summaries", {})
                             

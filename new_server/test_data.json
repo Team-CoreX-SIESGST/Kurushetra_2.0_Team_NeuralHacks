@@ -1,0 +1,29 @@
+{
+  "project": "AI Research Dataset",
+  "domain": "machine_learning",
+  "datasets": [
+    {
+      "name": "IMDB Movie Reviews",
+      "type": "text_classification",
+      "size": 50000,
+      "task": "sentiment_analysis"
+    },
+    {
+      "name": "CoNLL-2003",
+      "type": "named_entity_recognition", 
+      "languages": ["English", "German"],
+      "entities": ["PERSON", "LOCATION", "ORGANIZATION"]
+    }
+  ],
+  "models": {
+    "transformer_models": ["BERT", "RoBERTa", "DistilBERT"],
+    "frameworks": ["Hugging Face", "PyTorch", "TensorFlow"],
+    "evaluation_metrics": ["F1-score", "accuracy", "precision", "recall"]
+  },
+  "applications": [
+    "chatbots",
+    "search_engines", 
+    "content_moderation",
+    "document_classification"
+  ]
+}

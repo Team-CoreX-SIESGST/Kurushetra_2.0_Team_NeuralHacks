@@ -253,6 +253,70 @@ async def summarize_json_data_with_urls(json_data: Dict[Any, Any]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating summary with URLs: {str(e)}")
 
+@app.post("/fetch-web-urls")
+async def fetch_web_urls(request_data: Dict[Any, Any]):
+    """Dedicated endpoint to fetch related web URLs in JSON array format"""
+    try:
+        # Extract parameters from request
+        content = request_data.get("content", "")
+        extracted_data = request_data.get("extracted_data", {})
+        max_urls = request_data.get("max_urls", 10)
+        ai_categories = request_data.get("ai_categories")
+        
+        if not content and not extracted_data:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'content' text or 'extracted_data' object must be provided"
+            )
+        
+        # If only content is provided, create a simple extracted_data structure
+        if content and not extracted_data:
+            extracted_data = {
+                "content_type": "text",
+                "content": content
+            }
+        
+        # Use web search engine to find relevant URLs
+        from web_search import WebSearchEngine
+        web_search_engine = WebSearchEngine()
+        
+        # Find related web URLs
+        web_search_result = await web_search_engine.find_relevant_urls(
+            content or rag_system._prepare_context(extracted_data),
+            extracted_data,
+            max_urls=max_urls,
+            ai_categories=ai_categories
+        )
+        
+        # Format the response with URLs in JSON array format
+        urls_array = []
+        if web_search_result and "urls" in web_search_result:
+            for url_data in web_search_result["urls"]:
+                urls_array.append({
+                    "title": url_data.get("title", "Untitled"),
+                    "url": url_data.get("url", ""),
+                    "description": url_data.get("description", ""),
+                    "source": url_data.get("source", "unknown"),
+                    "domain": url_data.get("domain", ""),
+                    "relevance_score": url_data.get("relevance_score", 0.0)
+                })
+        
+        return {
+            "status": "success",
+            "message": f"Found {len(urls_array)} related web URLs",
+            "urls": urls_array,
+            "search_metadata": {
+                "total_urls_found": len(urls_array),
+                "max_urls_requested": max_urls,
+                "search_timestamp": rag_system.get_current_timestamp(),
+                "ai_categories_used": ai_categories is not None,
+                "content_type": extracted_data.get("content_type", "unknown")
+            }
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching web URLs: {str(e)}")
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
