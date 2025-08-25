@@ -74,59 +74,7 @@ export default function StyleDiagnostic() {
   
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <details className="bg-gray-900 text-white p-4 rounded-lg shadow-lg max-w-xs text-xs">
-        <summary className="cursor-pointer font-semibold mb-2">
-          🔍 Style Diagnostics
-        </summary>
-        
-        {diagnostics && (
-          <div className="space-y-2">
-            <div>
-              <strong>Tailwind:</strong> {diagnostics.tailwindLoaded ? '✅' : '❌'}
-            </div>
-            
-            <div>
-              <strong>Inter Font:</strong> {
-                diagnostics.fontLoaded === true ? '✅' : 
-                diagnostics.fontLoaded === false ? '❌' : '❓'
-              }
-            </div>
-            
-            <div>
-              <strong>Theme:</strong> {diagnostics.theme}
-            </div>
-            
-            <div>
-              <strong>Viewport:</strong> {diagnostics.viewport.width}×{diagnostics.viewport.height} 
-              ({diagnostics.viewport.ratio}x)
-            </div>
-            
-            <div>
-              <strong>Test Styles:</strong>
-              <ul className="ml-2 mt-1 space-y-1">
-                <li>BG: {diagnostics.testElement.backgroundColor}</li>
-                <li>Color: {diagnostics.testElement.color}</li>
-                <li>Padding: {diagnostics.testElement.padding}</li>
-              </ul>
-            </div>
-            
-            <div>
-              <strong>Browser:</strong> {
-                diagnostics.browser.userAgent.includes('Chrome') ? 'Chrome' :
-                diagnostics.browser.userAgent.includes('Firefox') ? 'Firefox' :
-                diagnostics.browser.userAgent.includes('Safari') ? 'Safari' :
-                'Other'
-              }
-            </div>
-            
-            {diagnostics.timing && (
-              <div>
-                <strong>Load Time:</strong> {diagnostics.timing.loadComplete}ms
-              </div>
-            )}
-          </div>
-        )}
-      </details>
+
     </div>
   );
 }

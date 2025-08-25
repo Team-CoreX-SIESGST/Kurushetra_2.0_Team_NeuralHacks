@@ -28,7 +28,7 @@ const handleRequest = async (axiosCall) => {
     };
   }
 };
-const base_url = "http://localhost:8001/api"
+const base_url = process.env.NEXT_PUBLIC_API_URL;
 
 export const apiClient = {
   get: async (url, headers = {}) =>

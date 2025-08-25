@@ -36,9 +36,9 @@ export default function SidebarContent({
 
   return (
     <div className="space-y-1">
-      {sections.map((section) => (
+      {sections.map((section,index) => (
         <SectionItem
-          key={section?._id}
+          key={section?._id + index}
           section={section}
           currentSection={currentSection}
           editingSection={editingSection}

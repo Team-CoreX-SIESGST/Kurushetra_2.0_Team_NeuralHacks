@@ -3,7 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { userRoute } from "./controllers/user/userRoutes.js";
 // import roleRouter from "./controllers/roles/rolesRouter.js"
-import chatRouter from './controllers/chats/chatRoutes.js'
+import chatRouter from "./controllers/chats/chatRoutes.js";
 import { verifyJWT } from "./middlewares/auth.middleware.js";
 const app = express();
 
@@ -22,6 +22,17 @@ app.use(cookieParser());
 app.use("/api/users", userRoute);
 // app.use("/api/role",roleRouter)
 app.use(verifyJWT);
-app.use("/api/sections",chatRouter);
+app.use("/api/sections", chatRouter);
+
+// backend route for OAuth callback
+app.get("/oauth2callback", (req, res) => {
+    // This endpoint should redirect to the frontend callback page with the token
+    const token = req.query.access_token;
+    if (token) {
+        res.redirect(`${process.env.FRONTEND_URL}/oauth-callback#access_token=${token}`);
+    } else {
+        res.redirect(`${process.env.FRONTEND_URL}/oauth-callback#error=auth_failed`);
+    }
+});
 
 export { app };
