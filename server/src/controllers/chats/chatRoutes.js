@@ -7,9 +7,9 @@ import {
     sendMessage,
     deleteSection,
     updateSectionTitle,
-    uploadDocument,
-    getSectionWithDocuments,
-    deleteDocument
+    // uploadDocument,
+    // getSectionWithDocuments,
+    // deleteDocument
 } from "./chatController.js";
 import { chatLimiter } from "../../utils/index.js";
 const router = express.Router();
@@ -28,8 +28,8 @@ router.delete("/:sectionId", deleteSection);
 
 
 // NEW: Document routes
-router.post("/section/:sectionId/upload-document", uploadDocument);
-router.get("/section/:sectionId/with-documents", getSectionWithDocuments);
-router.delete("/document/:documentId", deleteDocument);
+// router.post("/section/:sectionId/upload-document", uploadDocument);
+// router.get("/section/:sectionId/with-documents", getSectionWithDocuments);
+// router.delete("/document/:documentId", deleteDocument);
 
 export default router;
