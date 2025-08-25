@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "seed:plans": "node -r dotenv/config src/scripts/seedPlans.js"
+    "seed:plans": "node -r dotenv/config src/scripts/seedPlans.js",
+      "delete-user": "node src/scripts/deleteUserData.js"
+ 
   },
   "keywords": [],
   "author": "",
