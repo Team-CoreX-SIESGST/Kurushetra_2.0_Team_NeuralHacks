@@ -3,7 +3,7 @@ import { asyncHandler, sendResponse, statusType } from "../../utils/index.js";
 import Section from "../../models/section.js";
 import Chat from "../../models/chat.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
+import {sample_summary,researchPrompt} from "../../utils/sample.js"
 // Initialize the Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -155,6 +155,10 @@ export const updateSectionTitle = asyncHandler(async (req, res) => {
 async function getAIResponse(message, previousContext = []) {
     try {
         // Try with the pro model first
+        const prompt = researchPrompt
+            .replace("{context_data}", sample_summary)
+            .replace("{user_query}", message);
+        // console.log(prompt)
         let model;
         try {
             model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -166,7 +170,7 @@ async function getAIResponse(message, previousContext = []) {
         // Prepare the conversation history with context
         const conversationHistory = [
             ...previousContext,
-            { role: "user", parts: [{ text: message }] }
+            { role: "user", parts: [{ text: prompt }] }
         ];
 
         // Start a chat session if we have history, otherwise start a new conversation
