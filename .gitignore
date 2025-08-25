@@ -1,0 +1,3 @@
+# Ignore backend and frontend folders
+server_FastAPI/
+streamlit_frontend/

@@ -4,6 +4,8 @@ import cookieParser from "cookie-parser";
 import { userRoute } from "./controllers/user/userRoutes.js";
 // import roleRouter from "./controllers/roles/rolesRouter.js"
 import chatRouter from "./controllers/chats/chatRoutes.js";
+import subscriptionRouter from "./controllers/subscription/subscriptionRoutes.js";
+import promptRouter from "./controllers/ai/promptRoutes.js";
 import { verifyJWT } from "./middlewares/auth.middleware.js";
 const app = express();
 
@@ -20,9 +22,13 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use("/api/users", userRoute);
+// Public subscription routes
+app.use("/api/subscription", subscriptionRouter);
+
 // app.use("/api/role",roleRouter)
 app.use(verifyJWT);
 app.use("/api/sections", chatRouter);
+app.use("/api/ai", promptRouter);
 
 // backend route for OAuth callback
 app.get("/oauth2callback", (req, res) => {

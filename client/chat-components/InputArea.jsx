@@ -142,7 +142,42 @@ export default function InputArea({
     }
   }, []);
 
-  const handleAutoCorrect = async () => {};
+  const [isCorrectingPrompt, setIsCorrectingPrompt] = useState(false);
+
+  const handleAutoCorrect = async () => {
+    if (!message.trim() || isCorrectingPrompt) return;
+
+    setIsCorrectingPrompt(true);
+    try {
+      const response = await fetch('/api/ai/improve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ prompt: message }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setMessage(data.data.improvedPrompt);
+      } else {
+        // Handle error cases
+        console.error('Failed to improve prompt:', data.message);
+        if (response.status === 429) {
+          alert(`Token limit exceeded: ${data.message}\n\nPlease upgrade your plan to continue.`);
+        } else {
+          alert(data.message || 'Failed to improve prompt. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error improving prompt:', error);
+      alert('Network error. Please check your connection and try again.');
+    } finally {
+      setIsCorrectingPrompt(false);
+    }
+  };
 
   return (
     <div className="p-4 bg-white dark:bg-slate-900">
@@ -231,8 +266,17 @@ export default function InputArea({
                 style={{ minHeight: "24px", maxHeight: "200px" }}
               />
             </div>
-            <button className="flex-shrink-0 w-8 h-8 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center disabled:hover:bg-slate-900 dark:disabled:hover:bg-slate-100">
-              A
+            <button
+              onClick={handleAutoCorrect}
+              disabled={!message.trim() || isCorrectingPrompt || isLoading}
+              className="flex-shrink-0 w-8 h-8 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center disabled:hover:bg-slate-900 dark:disabled:hover:bg-slate-100"
+              title="Improve prompt with AI"
+            >
+              {isCorrectingPrompt ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "A"
+              )}
             </button>
             <button
               onClick={handleSendMessage}

@@ -4,6 +4,7 @@ uvicorn[standard]
 python-multipart
 requests
 aiohttp
+psutil
 beautifulsoup4
 pydantic
 pydantic-settings

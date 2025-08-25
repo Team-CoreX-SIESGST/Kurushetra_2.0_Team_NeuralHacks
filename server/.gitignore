@@ -109,4 +109,4 @@ public
 # Temporary folders
 tmp/
 temp/ 
-/
+/.venv

@@ -1,4 +1,5 @@
 import User from "../../models/user.js";
+import Plan from "../../models/plan.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
@@ -37,6 +38,25 @@ const cookieOptions = {
     sameSite: "Strict"
 };
 
+// Helper function to get and assign free plan
+const assignFreePlan = async (userId) => {
+    try {
+        const freePlan = await Plan.findOne({ name: "Free" });
+        if (freePlan) {
+            await User.findByIdAndUpdate(userId, {
+                plan: freePlan._id,
+                tokensUsed: 0,
+                tokenResetDate: new Date(),
+                subscriptionStatus: "active"
+            });
+        }
+        return freePlan;
+    } catch (error) {
+        console.error("Error assigning free plan:", error);
+        return null;
+    }
+};
+
 export const createUser = asyncHandler(async (req, res) => {
     const { name, email, password, date_of_birth, image, googleToken } = req.body;
     // Google Auth Flow
@@ -68,6 +88,9 @@ export const createUser = asyncHandler(async (req, res) => {
                 image: googleUser.picture,
                 date_of_birth: date_of_birth || null
             });
+
+            // Assign free plan to new user
+            await assignFreePlan(user._id);
 
             // Generate tokens and respond
             const accessToken = generateAccessToken(user);
@@ -119,6 +142,9 @@ export const createUser = asyncHandler(async (req, res) => {
         // Save User
         user = await User.create({ name, email, password: hashedPassword, date_of_birth, image });
 
+        // Assign free plan to new user
+        await assignFreePlan(user._id);
+
         // Generate Tokens
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
@@ -165,6 +191,8 @@ export const loginUser = asyncHandler(async (req, res) => {
                     googleId: googleUser.sub,
                     image: googleUser.picture
                 });
+                // Assign free plan to new user
+                await assignFreePlan(user._id);
             }
 
             // Generate tokens and respond
