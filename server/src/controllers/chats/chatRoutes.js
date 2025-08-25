@@ -6,7 +6,10 @@ import {
     getSection,
     sendMessage,
     deleteSection,
-    updateSectionTitle
+    updateSectionTitle,
+    uploadDocument,
+    getSectionWithDocuments,
+    deleteDocument
 } from "./chatController.js";
 import { chatLimiter } from "../../utils/index.js";
 const router = express.Router();
@@ -20,5 +23,13 @@ router.get("/:sectionId", getSection);
 router.post("/:sectionId/message", chatLimiter, sendMessage);
 router.put("/:sectionId/title", updateSectionTitle);
 router.delete("/:sectionId", deleteSection);
+
+// Chat routes
+
+
+// NEW: Document routes
+router.post("/section/:sectionId/upload-document", uploadDocument);
+router.get("/section/:sectionId/with-documents", getSectionWithDocuments);
+router.delete("/document/:documentId", deleteDocument);
 
 export default router;
