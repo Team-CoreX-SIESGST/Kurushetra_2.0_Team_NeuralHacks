@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import hashlib
 from web_search import WebSearchEngine
+from web_hf_inference import HFInferenceClient
 
 class RAGSystem:
     def __init__(self, api_key: Optional[str] = None):
@@ -56,9 +57,25 @@ class RAGSystem:
                 )
             
             # 4. Executive Summary
-            summaries["executive"] = await self._call_gemini_api(
-                self._create_executive_summary_prompt(context)
-            )
+            use_hf_exec = os.getenv("USE_HF_EXEC_SUMMARY", "false").lower() in ("1", "true", "yes")
+            if use_hf_exec:
+                try:
+                    hf = HFInferenceClient()
+                    hf_result = hf.summarize_text(context)
+                    if "error" not in hf_result:
+                        summaries["executive"] = hf_result.get("summary", "")
+                    else:
+                        summaries["executive"] = await self._call_gemini_api(
+                            self._create_executive_summary_prompt(context)
+                        )
+                except Exception:
+                    summaries["executive"] = await self._call_gemini_api(
+                        self._create_executive_summary_prompt(context)
+                    )
+            else:
+                summaries["executive"] = await self._call_gemini_api(
+                    self._create_executive_summary_prompt(context)
+                )
             
             # 5. Content Analysis
             summaries["analysis"] = await self._call_gemini_api(
@@ -199,6 +216,9 @@ class RAGSystem:
         2. Key information and findings
         3. Important details and context
         4. Overall conclusion or takeaways
+        5. Page-wise summary for each page (use format: "Page N: one to two sentences")
+        6. Extracted metadata: author details (names, affiliations, emails if present) and dates (creation, modification, publication, and notable dates mentioned in the content). Highlight ALL names of authors/proposers/organizations by wrapping them in **double asterisks** (e.g., **Jane Doe**).
+        7. Specifically scan the first two pages and list any person or organization names found there as the probable author/proposer, if reasonable. Highlight these names with **double asterisks** and include any nearby roles/titles/emails.
         
         Keep the summary informative but concise.
         """

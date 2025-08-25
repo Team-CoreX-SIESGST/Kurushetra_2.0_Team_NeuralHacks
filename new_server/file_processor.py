@@ -36,8 +36,14 @@ try:
     from PIL import Image
     import pytesseract
     OCR_AVAILABLE = True
+    # Configure tesseract path if provided or discover common Windows install locations
+    
+    # Optional lightweight transformer OCR (TrOCR base model)
+    from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+    import torch
+    TRANSFORMER_OCR_AVAILABLE = True
 except ImportError:
-    OCR_AVAILABLE = False
+    TRANSFORMER_OCR_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup
@@ -50,6 +56,13 @@ try:
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
+
+# Optional hosted OCR via Hugging Face Inference API
+try:
+    from web_hf_inference import HFInferenceClient
+    HF_INFERENCE_AVAILABLE = True
+except Exception:
+    HF_INFERENCE_AVAILABLE = False
 
 class FileProcessor:
     def __init__(self):
@@ -447,25 +460,63 @@ class FileProcessor:
     
     def _process_image_ocr(self, file_path: str) -> Dict[str, Any]:
         """Process images with OCR"""
-        try:
-            image = Image.open(file_path)
-            
-            # Extract text using OCR
-            extracted_text = pytesseract.image_to_string(image)
-            
-            # Get image metadata
-            metadata = {
-                "format": image.format,
-                "mode": image.mode,
-                "size": image.size,
-                "has_transparency": "transparency" in image.info
-            }
-            
-            return {
-                "content_type": "image_ocr",
-                "extracted_text": extracted_text.strip(),
-                "image_metadata": metadata
-            }
-            
-        except Exception as e:
-            raise Exception(f"OCR processing failed: {str(e)}")
+        image = Image.open(file_path)
+        metadata = {
+            "format": image.format,
+            "mode": image.mode,
+            "size": image.size,
+            "has_transparency": "transparency" in image.info
+        }
+
+        # 1) Try Tesseract if available
+        if OCR_AVAILABLE:
+            try:
+                extracted_text = pytesseract.image_to_string(image)
+                return {
+                    "content_type": "image_ocr",
+                    "extracted_text": extracted_text.strip(),
+                    "image_metadata": metadata,
+                    "engine": "tesseract"
+                }
+            except Exception:
+                pass
+
+        # 2) Fallback to transformer-based OCR if available
+        if TRANSFORMER_OCR_AVAILABLE:
+            try:
+                processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
+                model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
+                pixel_values = processor(images=image, return_tensors="pt").pixel_values
+                generated_ids = model.generate(pixel_values)
+                extracted_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+                return {
+                    "content_type": "image_ocr",
+                    "extracted_text": extracted_text.strip(),
+                    "image_metadata": metadata,
+                    "engine": "trocr-base"
+                }
+            except Exception as e:
+                raise Exception(f"Transformer OCR failed: {str(e)}")
+
+        # 3) Try hosted Hugging Face Inference API if available/configured
+        if HF_INFERENCE_AVAILABLE:
+            try:
+                with open(file_path, 'rb') as f:
+                    image_bytes = f.read()
+                hf_client = HFInferenceClient()
+                hf_result = hf_client.ocr_image(image_bytes)
+                if "error" not in hf_result:
+                    return {
+                        "content_type": "image_ocr",
+                        "extracted_text": hf_result.get("text", "").strip(),
+                        "image_metadata": metadata,
+                        "engine": "hf_inference",
+                        "hf_raw": hf_result.get("raw")
+                    }
+            except Exception:
+                pass
+
+        # 4) If no engine succeeded
+        raise Exception(
+            "OCR processing failed: No OCR engine succeeded (tesseract, local transformer, or HF Inference API)."
+        )
