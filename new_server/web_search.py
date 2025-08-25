@@ -129,6 +129,51 @@ class WebSearchEngine:
             print(f"DuckDuckGo search error: {str(e)}")
             return []
     
+    async def search_duckduckgo_html(self, query: str, max_results: int = 5) -> List[Dict[str, str]]:
+        """Search using DuckDuckGo HTML scraping for better results"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Use DuckDuckGo lite search
+                search_url = "https://lite.duckduckgo.com/lite/"
+                
+                params = {
+                    'q': query,
+                    'kl': 'us-en'
+                }
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+                
+                async with session.get(search_url, params=params, headers=headers) as response:
+                    if response.status == 200:
+                        html_content = await response.text()
+                        
+                        # Simple HTML parsing to extract search results
+                        results = []
+                        import re
+                        
+                        # Look for result patterns in the HTML
+                        # This is a basic pattern - you might need to adjust based on actual HTML structure
+                        url_pattern = r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>'
+                        matches = re.findall(url_pattern, html_content)
+                        
+                        for i, (url, title) in enumerate(matches[:max_results]):
+                            if url.startswith('http') and 'duckduckgo' not in url:
+                                results.append({
+                                    'title': title.strip()[:100],
+                                    'url': url,
+                                    'description': f'Search result for "{query}"',
+                                    'source': 'DuckDuckGo Search'
+                                })
+                        
+                        return results
+                    
+                    return []
+        except Exception as e:
+            print(f"DuckDuckGo HTML search error: {str(e)}")
+            return []
+    
     async def search_google(self, query: str, max_results: int = 5) -> List[Dict[str, str]]:
         """Search using Google Custom Search API (if available)"""
         if not self.search_engines["google"]["enabled"]:
@@ -165,30 +210,274 @@ class WebSearchEngine:
             print(f"Google search error: {str(e)}")
             return []
     
-    def get_educational_urls(self, keywords: List[str]) -> List[Dict[str, str]]:
-        """Get educational and reference URLs based on keywords"""
-        educational_sites = {
-            "wikipedia": "https://en.wikipedia.org/wiki/",
-            "investopedia": "https://www.investopedia.com/search?q=",
-            "khan_academy": "https://www.khanacademy.org/search?page_search_query=",
-            "coursera": "https://www.coursera.org/search?query=",
-            "edx": "https://www.edx.org/search?q="
-        }
-        
+    def get_specialized_urls(self, keywords: List[str], content: str) -> List[Dict[str, str]]:
+        """Get specialized URLs based on content domain and keywords"""
         urls = []
-        for keyword in keywords[:3]:  # Top 3 keywords
-            for site_name, base_url in educational_sites.items():
-                url = base_url + quote_plus(keyword)
+        
+        # Detect content domain
+        nlp_terms = ['nlp', 'natural language processing', 'text mining', 'sentiment analysis', 'tokenization', 'word embedding', 'transformer']
+        ai_ml_terms = ['machine learning', 'artificial intelligence', 'deep learning', 'neural network', 'classification', 'regression']
+        data_science_terms = ['data science', 'data analysis', 'statistics', 'visualization', 'pandas', 'numpy']
+        programming_terms = ['python', 'programming', 'algorithm', 'code', 'software']
+        
+        content_lower = content.lower()
+        
+        # Specialized resources based on content type
+        if any(term in content_lower for term in nlp_terms):
+            # NLP-specific resources
+            specialized_sites = {
+                "papers_with_code_nlp": f"https://paperswithcode.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "huggingface": f"https://huggingface.co/models?search={quote_plus(' '.join(keywords[:2]))}",
+                "nltk_book": "https://www.nltk.org/book/",
+                "spacy_docs": "https://spacy.io/",
+                "stanford_nlp": "https://stanfordnlp.github.io/stanza/"
+            }
+            
+            for site_name, url in specialized_sites.items():
+                title = f"{' '.join(keywords[:2]).title()} - {site_name.replace('_', ' ').title()}"
+                description = f"NLP resources and tools for {' '.join(keywords[:2])}"
                 urls.append({
-                    'title': f"{keyword.title()} - {site_name.replace('_', ' ').title()}",
+                    'title': title,
                     'url': url,
-                    'description': f"Educational content about {keyword} from {site_name.replace('_', ' ').title()}",
-                    'source': f"{site_name.replace('_', ' ').title()} (Educational)"
+                    'description': description,
+                    'source': f'{site_name.replace("_", " ").title()} (NLP Specialized)'
                 })
         
-        return urls[:5]  # Return top 5 educational URLs
+        elif any(term in content_lower for term in ai_ml_terms):
+            # AI/ML-specific resources
+            specialized_sites = {
+                "papers_with_code": f"https://paperswithcode.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "towards_data_science": f"https://towardsdatascience.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "scikit_learn": "https://scikit-learn.org/stable/",
+                "tensorflow": "https://www.tensorflow.org/",
+                "pytorch": "https://pytorch.org/"
+            }
+            
+            for site_name, url in specialized_sites.items():
+                title = f"{' '.join(keywords[:2]).title()} - {site_name.replace('_', ' ').title()}"
+                description = f"Machine learning resources for {' '.join(keywords[:2])}"
+                urls.append({
+                    'title': title,
+                    'url': url,
+                    'description': description,
+                    'source': f'{site_name.replace("_", " ").title()} (ML Specialized)'
+                })
+        
+        elif any(term in content_lower for term in data_science_terms):
+            # Data Science resources
+            specialized_sites = {
+                "kaggle": f"https://www.kaggle.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "towards_data_science": f"https://towardsdatascience.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "pandas_docs": "https://pandas.pydata.org/docs/",
+                "matplotlib": "https://matplotlib.org/",
+                "seaborn": "https://seaborn.pydata.org/"
+            }
+            
+            for site_name, url in specialized_sites.items():
+                title = f"{' '.join(keywords[:2]).title()} - {site_name.replace('_', ' ').title()}"
+                description = f"Data science resources for {' '.join(keywords[:2])}"
+                urls.append({
+                    'title': title,
+                    'url': url,
+                    'description': description,
+                    'source': f'{site_name.replace("_", " ").title()} (Data Science)'
+                })
+        
+        elif any(term in content_lower for term in programming_terms):
+            # Programming resources
+            specialized_sites = {
+                "github": f"https://github.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "stack_overflow": f"https://stackoverflow.com/search?q={quote_plus(' '.join(keywords[:2]))}",
+                "python_docs": "https://docs.python.org/3/",
+                "real_python": f"https://realpython.com/search/?q={quote_plus(' '.join(keywords[:2]))}"
+            }
+            
+            for site_name, url in specialized_sites.items():
+                title = f"{' '.join(keywords[:2]).title()} - {site_name.replace('_', ' ').title()}"
+                description = f"Programming resources for {' '.join(keywords[:2])}"
+                urls.append({
+                    'title': title,
+                    'url': url,
+                    'description': description,
+                    'source': f'{site_name.replace("_", " ").title()} (Programming)'
+                })
+        
+        # Always add some general academic resources
+        general_academic = {
+            "arxiv": f"https://arxiv.org/search/?query={quote_plus(' '.join(keywords[:3]))}&searchtype=all",
+            "google_scholar": f"https://scholar.google.com/scholar?q={quote_plus(' '.join(keywords[:3]))}",
+            "wikipedia": f"https://en.wikipedia.org/wiki/{quote_plus(keywords[0])}" if keywords else "https://en.wikipedia.org"
+        }
+        
+        for site_name, url in general_academic.items():
+            title = f"{' '.join(keywords[:2]).title()} - {site_name.replace('_', ' ').title()}"
+            description = f"Academic resources about {' '.join(keywords[:2])}"
+            urls.append({
+                'title': title,
+                'url': url,
+                'description': description,
+                'source': f'{site_name.replace("_", " ").title()} (Academic)'
+            })
+        
+        return urls[:8]  # Return top 8 specialized URLs
     
-    async def find_relevant_urls(self, content: str, extracted_data: Dict[str, Any], max_urls: int = 10) -> Dict[str, Any]:
+    def get_ai_powered_specialized_urls(self, ai_categories: Dict[str, Any], keywords: List[str]) -> List[Dict[str, str]]:
+        """Get specialized URLs based on AI-generated categories"""
+        urls = []
+        
+        try:
+            # Extract categories from AI response
+            primary_domains = ai_categories.get('primary_domains', [])
+            topics = ai_categories.get('topics', [])
+            search_terms = ai_categories.get('search_terms', [])
+            tools_technologies = ai_categories.get('tools_technologies', [])
+            academic_fields = ai_categories.get('academic_fields', [])
+            
+            # Use AI-generated search terms if available, otherwise fallback to keywords
+            effective_terms = search_terms[:3] if search_terms else keywords[:3]
+            
+            # Domain-specific resource mapping
+            domain_resources = {
+                'artificial_intelligence': {
+                    'papers_with_code': f"https://paperswithcode.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'towards_data_science': f"https://towardsdatascience.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'ai_news': 'https://www.artificialintelligence-news.com/',
+                    'openai_blog': 'https://openai.com/blog/',
+                    'deepmind_blog': 'https://deepmind.com/blog'
+                },
+                'machine_learning': {
+                    'papers_with_code': f"https://paperswithcode.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'scikit_learn': 'https://scikit-learn.org/stable/',
+                    'tensorflow': 'https://www.tensorflow.org/',
+                    'pytorch': 'https://pytorch.org/',
+                    'kaggle': f"https://www.kaggle.com/search?q={quote_plus(' '.join(effective_terms))}"
+                },
+                'natural_language_processing': {
+                    'huggingface': f"https://huggingface.co/models?search={quote_plus(' '.join(effective_terms))}",
+                    'nltk_book': 'https://www.nltk.org/book/',
+                    'spacy_docs': 'https://spacy.io/',
+                    'stanford_nlp': 'https://stanfordnlp.github.io/stanza/',
+                    'papers_with_code_nlp': f"https://paperswithcode.com/search?q={quote_plus(' '.join(effective_terms))}"
+                },
+                'data_science': {
+                    'kaggle': f"https://www.kaggle.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'towards_data_science': f"https://towardsdatascience.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'pandas_docs': 'https://pandas.pydata.org/docs/',
+                    'numpy_docs': 'https://numpy.org/doc/',
+                    'matplotlib': 'https://matplotlib.org/'
+                },
+                'software_engineering': {
+                    'github': f"https://github.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'stack_overflow': f"https://stackoverflow.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'medium_programming': f"https://medium.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'dev_community': f"https://dev.to/search?q={quote_plus(' '.join(effective_terms))}"
+                },
+                'cybersecurity': {
+                    'owasp': 'https://owasp.org/',
+                    'nist_cybersecurity': 'https://www.nist.gov/cyberframework',
+                    'sans_institute': 'https://www.sans.org/',
+                    'krebs_security': 'https://krebsonsecurity.com/'
+                },
+                'finance': {
+                    'investopedia': f"https://www.investopedia.com/search?q={quote_plus(' '.join(effective_terms))}",
+                    'morningstar': 'https://www.morningstar.com/',
+                    'sec_gov': 'https://www.sec.gov/',
+                    'yahoo_finance': f"https://finance.yahoo.com/quote/{effective_terms[0] if effective_terms else 'SPY'}"
+                },
+                'healthcare': {
+                    'pubmed': f"https://pubmed.ncbi.nlm.nih.gov/?term={quote_plus(' '.join(effective_terms))}",
+                    'who': 'https://www.who.int/',
+                    'cdc': 'https://www.cdc.gov/',
+                    'nih': 'https://www.nih.gov/'
+                },
+                'blockchain': {
+                    'coindesk': 'https://www.coindesk.com/',
+                    'ethereum_docs': 'https://ethereum.org/en/developers/docs/',
+                    'blockchain_info': 'https://www.blockchain.com/',
+                    'github_crypto': f"https://github.com/search?q={quote_plus(' '.join(effective_terms) + ' blockchain')}"
+                }
+            }
+            
+            # Add URLs based on identified domains
+            for domain in primary_domains:
+                domain_key = domain.lower().replace(' ', '_')
+                if domain_key in domain_resources:
+                    resources = domain_resources[domain_key]
+                    for resource_name, resource_url in resources.items():
+                        title = f"{domain.replace('_', ' ').title()} - {resource_name.replace('_', ' ').title()}"
+                        description = f"Specialized {domain.replace('_', ' ')} resources and tools"
+                        urls.append({
+                            'title': title,
+                            'url': resource_url,
+                            'description': description,
+                            'source': f'{resource_name.replace("_", " ").title()} (AI-Categorized)'
+                        })
+            
+            # Add academic resources based on identified fields
+            for field in academic_fields:
+                field_query = quote_plus(f"{field} {' '.join(effective_terms[:2])}")
+                academic_resources = {
+                    'google_scholar': f"https://scholar.google.com/scholar?q={field_query}",
+                    'arxiv': f"https://arxiv.org/search/?query={field_query}&searchtype=all",
+                    'researchgate': f"https://www.researchgate.net/search?q={field_query}"
+                }
+                
+                for resource_name, resource_url in academic_resources.items():
+                    title = f"{field.title()} Research - {resource_name.replace('_', ' ').title()}"
+                    description = f"Academic resources for {field} research"
+                    urls.append({
+                        'title': title,
+                        'url': resource_url,
+                        'description': description,
+                        'source': f'{resource_name.replace("_", " ").title()} (Academic)'
+                    })
+            
+            # Add tool-specific resources
+            for tool in tools_technologies:
+                tool_query = quote_plus(f"{tool} documentation tutorial")
+                tool_resources = {
+                    'official_docs': f"https://www.google.com/search?q={tool_query}+site:docs",
+                    'github_search': f"https://github.com/search?q={quote_plus(tool)}",
+                    'stack_overflow': f"https://stackoverflow.com/search?q={quote_plus(tool)}"
+                }
+                
+                for resource_name, resource_url in tool_resources.items():
+                    title = f"{tool.title()} - {resource_name.replace('_', ' ').title()}"
+                    description = f"Resources and documentation for {tool}"
+                    urls.append({
+                        'title': title,
+                        'url': resource_url,
+                        'description': description,
+                        'source': f'{resource_name.replace("_", " ").title()} (Tool-Specific)'
+                    })
+            
+            # Always add some general academic resources with AI terms
+            if effective_terms:
+                general_query = quote_plus(' '.join(effective_terms[:3]))
+                general_academic = {
+                    'arxiv': f"https://arxiv.org/search/?query={general_query}&searchtype=all",
+                    'google_scholar': f"https://scholar.google.com/scholar?q={general_query}",
+                    'wikipedia': f"https://en.wikipedia.org/wiki/{quote_plus(effective_terms[0])}"
+                }
+                
+                for site_name, url in general_academic.items():
+                    title = f"{' '.join(effective_terms[:2]).title()} - {site_name.replace('_', ' ').title()}"
+                    description = f"Academic resources about {' '.join(effective_terms[:2])}"
+                    urls.append({
+                        'title': title,
+                        'url': url,
+                        'description': description,
+                        'source': f'{site_name.replace("_", " ").title()} (Academic)'
+                    })
+            
+            return urls[:10]  # Return top 10 AI-powered URLs
+            
+        except Exception as e:
+            print(f"Error in AI-powered URL generation: {str(e)}")
+            # Fallback to basic approach
+            return self.get_specialized_urls(keywords, ' '.join(topics) if topics else '')
+    
+    async def find_relevant_urls(self, content: str, extracted_data: Dict[str, Any], max_urls: int = 10, ai_categories: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Main function to find relevant URLs for content"""
         try:
             # Generate search queries
@@ -211,9 +500,12 @@ class WebSearchEngine:
                 # Small delay between searches to be respectful
                 await asyncio.sleep(0.5)
             
-            # Add educational URLs
-            educational_urls = self.get_educational_urls(keywords)
-            all_results.extend(educational_urls)
+            # Add specialized URLs based on AI categories or content domain
+            if ai_categories:
+                specialized_urls = self.get_ai_powered_specialized_urls(ai_categories, keywords)
+            else:
+                specialized_urls = self.get_specialized_urls(keywords, content)
+            all_results.extend(specialized_urls)
             
             # Remove duplicates based on URL
             seen_urls = set()
