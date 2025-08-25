@@ -273,10 +273,10 @@ export default function PricingPage() {
   const formatPrice = (price) => {
     if (price === 0) return "Free";
     // Convert paise to rupees (assuming price is in paise)
-    const rupees = price / 100;
+    const rupees = price;
     return billingPeriod === "yearly" 
-      ? `$${(rupees * 12 * 0.8).toLocaleString('en-IN')}`
-      : `$${rupees.toLocaleString('en-IN')}`;
+      ? `₹${(rupees * 12 * 0.8).toLocaleString('en-IN')}`
+      : `₹${rupees.toLocaleString('en-IN')}`;
   };
 
   const formatTokenLimit = (tokenLimit) => {
@@ -293,6 +293,7 @@ export default function PricingPage() {
         const responseData = await getPlans();
         if (responseData.status && responseData.data) {
           // Sort plans by price to ensure proper order
+          console.log(responseData)
           const sortedPlans = responseData.data.sort((a, b) => a.price - b.price);
           setPlans(sortedPlans);
         }
