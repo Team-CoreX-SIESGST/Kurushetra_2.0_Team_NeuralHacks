@@ -243,6 +243,7 @@ import Document from "../../models/document.js"; // NEW: Add this import
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import document from "../../models/document.js";
 
+import {sample_summary,researchPrompt} from "../../utils/sample.js"
 // Initialize the Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -648,6 +649,11 @@ function extractReferences(aiResponse, relevantChunks) {
 // Keep original function for fallback
 async function getAIResponse(message, previousContext = []) {
     try {
+        // Try with the pro model first
+        const prompt = researchPrompt
+            .replace("{context_data}", sample_summary)
+            .replace("{user_query}", message);
+        // console.log(prompt)
         let model;
         try {
             model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -657,7 +663,7 @@ async function getAIResponse(message, previousContext = []) {
 
         const conversationHistory = [
             ...previousContext,
-            { role: "user", parts: [{ text: message }] }
+            { role: "user", parts: [{ text: prompt }] }
         ];
 
         const chat = model.startChat({

@@ -17,11 +17,6 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: false
         },
-        // role: {
-        //     type: mongoose.Schema.Types.ObjectId,
-        //     ref: "Role",
-        //     required: true
-        // },
         image: {
             type: String,
             default: null
@@ -39,15 +34,27 @@ const userSchema = new mongoose.Schema(
             type: String,
             unique: true,
             sparse: true
-        }
-        // created_by: {
-        //     type: mongoose.Schema.Types.ObjectId,
-        //     ref: "User"
-        // },
-        // updated_by: {
-        //     type: mongoose.Schema.Types.ObjectId,
-        //     ref: "User"
-        // }
+        },
+        // New subscription fields
+        plan: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Plan",
+            required: true
+        },
+        tokensUsed: {
+            type: Number,
+            default: 0
+        },
+        tokenResetDate: {
+            type: Date,
+            default: Date.now
+        },
+        subscriptionStatus: {
+            type: String,
+            enum: ["active", "canceled", "expired"],
+            default: "active"
+        },
+        subscriptionId: String // For payment gateway reference
     },
     { timestamps: true }
 );

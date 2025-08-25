@@ -15,7 +15,7 @@ import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputArea from "./InputArea";
 import { Menu, MoreHorizontal, Bot } from "lucide-react";
-// import { processFile } from "@/utils/fileProcessors-browser";
+import { processFile } from "@/utils/fileProcessors-browser";
 
 // Simplified client-side file handling without Node.js dependencies
 const processFileSimple = (file) => {
@@ -129,31 +129,33 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
     }
   };
 
+  // ... existing code ...
+
   const handleSendMessage = async () => {
     if ((!message.trim() && selectedFiles.length === 0) || isLoading) return;
 
     let sectionToUse = currentSection;
-
-    // Create new section if none exists
     let processedFiles = [];
+
+    // Process files using the actual processor
     if (selectedFiles.length > 0) {
       try {
         processedFiles = await Promise.all(
-          selectedFiles.map((file) => processFileSimple(file))
+          selectedFiles.map((file) => processFile(file))
         );
       } catch (error) {
         console.error("Error processing files:", error);
         return;
       }
     }
+
+    // Create new section if none exists
     if (!currentSection) {
       try {
         const title = message.substring(0, 30) || "Files upload";
-        const payload = {
-          title: title + "...",
-        };
+        const payload = { title: title + "..." };
         const response = await createSection(payload);
-        sectionToUse = response.data.data;
+        sectionToUse = response.data;
         setCurrentSection(sectionToUse);
         setSections((prev) => [sectionToUse, ...prev]);
       } catch (error) {
@@ -162,27 +164,28 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
       }
     }
 
+    // Prepare message payload
     const messageToSend = message;
     const userMessage = {
       _id: Date.now() + "-user",
       message: messageToSend,
       isUser: true,
       createdAt: new Date(),
-      files: processedFiles, // Now includes processed file data
+      files: processedFiles, // Now contains properly processed files
     };
 
     setChats((prev) => [...prev, userMessage]);
     setMessage("");
-    setSelectedFiles([]); // Clear selected files after sending
+    setSelectedFiles([]);
     setIsLoading(true);
 
     // Send message with processed files
+    console.log(processedFiles,"feowifi")
+    // console.log(processedFiles,"feowifi")
     try {
-      console.log(processedFiles,"processed files")
-      console.log(messageToSend,"message content")
       const response = await sendMessage(sectionToUse._id, {
         message: messageToSend,
-        files: processedFiles,
+        files: processedFiles, // Send processed files to server
       });
       setChats((prev) => [...prev, response.data.data.aiMessage]);
     } catch (error) {
@@ -191,6 +194,8 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
       setIsLoading(false);
     }
   };
+
+  // ... existing code ...
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
