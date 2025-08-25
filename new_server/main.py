@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
 import tempfile
@@ -13,6 +14,18 @@ from rag_system import RAGSystem
 load_dotenv()
 
 app = FastAPI(title="File Processing & RAG System", version="1.0.0")
+
+# Enable CORS for local frontend on port 3000
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize processors
 file_processor = FileProcessor()
