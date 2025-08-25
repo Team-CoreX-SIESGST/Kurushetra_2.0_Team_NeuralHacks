@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniSearch AI - Client Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .container {
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        input[type="file"], input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status.healthy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .endpoint-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        
+        .demo-section {
+            border-left: 4px solid #28a745;
+            padding-left: 15px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 OmniSearch AI Client Demo</h1>
+        <p>FILE UPLOAD & MANAGEMENT + AI SEARCH ENDPOINTS</p>
+        <div id="serverStatus">
+            <span class="status" id="statusBadge">⏳ Checking...</span>
+            <span id="statusText">Testing server connection...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Available Endpoints</h2>
+        <div class="endpoint-info">
+            <strong>Server:</strong> http://localhost:8000<br>
+            <strong>Health:</strong> GET /health<br>
+            <strong>Upload:</strong> POST /api/v1/upload<br>
+            <strong>Files:</strong> GET /api/v1/files/{workspace_id}<br>
+            <strong>File Info:</strong> GET /api/v1/file/{file_id}<br>
+            <strong>Simple Search:</strong> GET /api/v1/search/simple<br>
+            <strong>Advanced Search:</strong> POST /api/v1/search<br>
+            <strong>Search Stats:</strong> GET /api/v1/search/stats/{workspace_id}
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="container demo-section">
+            <h2>📤 File Upload & Management</h2>
+            
+            <h3>Upload File</h3>
+            <input type="file" id="fileInput" accept=".txt,.md,.pdf,.docx,.rtf,.csv">
+            <button onclick="uploadFile()" id="uploadBtn">📤 Upload File</button>
+            <div id="uploadResults" class="results"></div>
+            
+            <h3>File Management</h3>
+            <button onclick="listFiles()" id="listBtn">📁 List Files</button>
+            <button onclick="getFileInfo()" id="infoBtn">📄 Get File Info</button>
+            <div id="fileResults" class="results"></div>
+        </div>
+
+        <div class="container demo-section">
+            <h2>🔍 AI Search</h2>
+            
+            <h3>Search Query</h3>
+            <textarea id="searchQuery" placeholder="Enter your search query...">What are the key concepts of artificial intelligence?</textarea>
+            
+            <button onclick="getSearchStats()" id="statsBtn">📊 Search Stats</button>
+            <button onclick="simpleSearch()" id="simpleBtn">🔍 Simple Search</button>
+            <button onclick="advancedSearch()" id="advancedBtn">🧠 AI Search</button>
+            
+            <div id="searchResults" class="results"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🚀 Quick Actions</h2>
+        <button onclick="runFullDemo()" id="demoBtn">🎯 Run Full Demo</button>
+        <button onclick="clearAllResults()">🧹 Clear Results</button>
+        <button onclick="checkServerHealth()">🏥 Check Health</button>
+        <a href="http://localhost:8000/docs" target="_blank">
+            <button>📚 API Docs</button>
+        </a>
+    </div>
+
+    <script>
+        // OmniSearch AI Client Class
+        class OmniSearchClient {
+            constructor(baseUrl = 'http://localhost:8000') {
+                this.baseUrl = baseUrl;
+                this.workspaceId = 'demo-workspace';
+                this.currentFileId = null;
+                this.rateLimitDelay = 1000; // 1 second delay between requests
+            }
+
+            // Add delay to prevent rate limiting
+            async delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            // Enhanced error handling for API calls
+            async makeRequest(url, options = {}) {
+                try {
+                    const response = await fetch(url, options);
+                    
+                    if (response.status === 429) {
+                        // Rate limited - wait and retry once
+                        console.warn('Rate limited, waiting 2 seconds...');
+                        await this.delay(2000);
+                        const retryResponse = await fetch(url, options);
+                        return { response: retryResponse, data: retryResponse.ok ? await retryResponse.json() : await retryResponse.text() };
+                    }
+                    
+                    const data = response.ok ? await response.json() : await response.text();
+                    return { response, data };
+                    
+                } catch (error) {
+                    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                        throw new Error('CORS Error: Please use the HTTP server (serve_demo.py) instead of opening the HTML file directly');
+                    }
+                    throw error;
+                }
+            }
+
+            async testHealth() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/health`);
+                    const data = await response.json();
+                    return { success: response.ok, data };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
+            async uploadFile(file) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('workspace_id', this.workspaceId);
+
+                    const { response, data } = await this.makeRequest(`${this.baseUrl}/api/v1/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    return { success: response.ok, data };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
+            async listFiles() {
+                const response = await fetch(`${this.baseUrl}/api/v1/files/${this.workspaceId}`);
+                return { success: response.ok, data: response.ok ? await response.json() : await response.text() };
+            }
+
+            async getFileInfo(fileId) {
+                const url = `${this.baseUrl}/api/v1/file/${fileId}?workspace_id=${this.workspaceId}`;
+                const response = await fetch(url);
+                return { success: response.ok, data: response.ok ? await response.json() : await response.text() };
+            }
+
+            async simpleSearch(query, topK = 5) {
+                const params = new URLSearchParams({
+                    workspace_id: this.workspaceId,
+                    query: query,
+                    top_k: topK
+                });
+
+                const response = await fetch(`${this.baseUrl}/api/v1/search/simple?${params}`);
+                return { success: response.ok, data: response.ok ? await response.json() : await response.text() };
+            }
+
+            async advancedSearch(query, options = {}) {
+                const searchData = {
+                    workspace_id: this.workspaceId,
+                    query: query,
+                    top_k: options.topK || 5,
+                    include_web: options.includeWeb || false,
+                    rerank: options.rerank || false,
+                    summarize: options.summarize !== false
+                };
+
+                const response = await fetch(`${this.baseUrl}/api/v1/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(searchData)
+                });
+
+                return { success: response.ok, data: response.ok ? await response.json() : await response.text() };
+            }
+
+            async getSearchStats() {
+                const response = await fetch(`${this.baseUrl}/api/v1/search/stats/${this.workspaceId}`);
+                return { success: response.ok, data: response.ok ? await response.json() : await response.text() };
+            }
+        }
+
+        // Initialize client
+        const client = new OmniSearchClient();
+
+        // UI Helper functions
+        function updateResults(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = content;
+            element.style.color = isError ? '#d32f2f' : '#000';
+        }
+
+        function disableButtons(disable = true) {
+            const buttons = ['uploadBtn', 'listBtn', 'infoBtn', 'statsBtn', 'simpleBtn', 'advancedBtn', 'demoBtn'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = disable;
+            });
+        }
+
+        // Server health check
+        async function checkServerHealth() {
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            
+            statusBadge.textContent = '⏳ Checking...';
+            statusBadge.className = 'status';
+            statusText.textContent = 'Testing server connection...';
+
+            const result = await client.testHealth();
+            
+            if (result.success) {
+                statusBadge.textContent = '✅ Healthy';
+                statusBadge.className = 'status healthy';
+                statusText.textContent = `Server is running - ${result.data.status}`;
+            } else {
+                statusBadge.textContent = '❌ Error';
+                statusBadge.className = 'status error';
+                statusText.textContent = `Cannot connect to server: ${result.error}`;
+            }
+        }
+
+        // File upload
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                updateResults('uploadResults', '❌ Please select a file first', true);
+                return;
+            }
+
+            disableButtons(true);
+            updateResults('uploadResults', '⏳ Uploading file...');
+
+            try {
+                const result = await client.uploadFile(fileInput.files[0]);
+                
+                if (result.success) {
+                    client.currentFileId = result.data.file_id;
+                    const details = result.data.details || {};
+                    updateResults('uploadResults', `
+                        ✅ <strong>Upload successful!</strong><br>
+                        📁 File ID: ${result.data.file_id}<br>
+                        📊 Status: ${result.data.status}<br>
+                        📄 Filename: ${result.data.filename || fileInput.files[0].name}<br>
+                        🔢 Chunks: ${details.chunks_created || 'N/A'}<br>
+                        📝 Characters: ${details.total_characters || 'N/A'}
+                    `);
+                } else if (result.error) {
+                    updateResults('uploadResults', `❌ Upload error: ${result.error}`, true);
+                } else {
+                    updateResults('uploadResults', `❌ Upload failed: ${result.data}`, true);
+                }
+            } catch (error) {
+                updateResults('uploadResults', `❌ Upload error: ${error.message}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // List files
+        async function listFiles() {
+            disableButtons(true);
+            updateResults('fileResults', '⏳ Loading files...');
+
+            const result = await client.listFiles();
+            
+            if (result.success) {
+                const data = result.data;
+                const files = data.files || [];
+                
+                if (files.length === 0) {
+                    updateResults('fileResults', 'ℹ️ No files found in workspace');
+                } else {
+                    if (!client.currentFileId && files.length > 0) {
+                        client.currentFileId = files[0].file_id;
+                    }
+                    
+                    const fileList = files.map(file => `
+                        <div style="margin: 10px 0; padding: 8px; background: #e9ecef; border-radius: 4px;">
+                            <strong>${file.filename}</strong><br>
+                            <small>ID: ${file.file_id.substring(0, 20)}...</small><br>
+                            <small>Size: ${file.file_size} bytes | Modified: ${new Date(file.last_modified).toLocaleString()}</small>
+                        </div>
+                    `).join('');
+                    
+                    updateResults('fileResults', `
+                        ✅ <strong>Found ${files.length} file(s):</strong><br>
+                        ${fileList}
+                    `);
+                }
+            } else {
+                updateResults('fileResults', `❌ Failed to list files: ${result.data}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // Get file info
+        async function getFileInfo() {
+            if (!client.currentFileId) {
+                updateResults('fileResults', '⚠️ No file selected. Please upload or list files first.', true);
+                return;
+            }
+
+            disableButtons(true);
+            updateResults('fileResults', '⏳ Getting file information...');
+
+            const result = await client.getFileInfo(client.currentFileId);
+            
+            if (result.success) {
+                const fileInfo = result.data.file_info || result.data;
+                updateResults('fileResults', `
+                    ✅ <strong>File Information:</strong><br>
+                    📄 Filename: ${fileInfo.filename}<br>
+                    🆔 File ID: ${fileInfo.file_id}<br>
+                    📊 Status: ${fileInfo.status}<br>
+                    💾 Storage: ${fileInfo.storage_type}<br>
+                    📁 Path: ${fileInfo.storage_path}<br>
+                    📏 Size: ${fileInfo.file_size} bytes<br>
+                    📅 Created: ${new Date(fileInfo.created_time || fileInfo.storage_time).toLocaleString()}
+                `);
+            } else {
+                updateResults('fileResults', `❌ Failed to get file info: ${result.data}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // Search statistics
+        async function getSearchStats() {
+            disableButtons(true);
+            updateResults('searchResults', '⏳ Getting search statistics...');
+
+            const result = await client.getSearchStats();
+            
+            if (result.success) {
+                const stats = result.data.stats || {};
+                updateResults('searchResults', `
+                    ✅ <strong>Search Statistics:</strong><br>
+                    🔍 Engine: ${stats.search_engine}<br>
+                    🤖 Model: ${stats.model}<br>
+                    📊 Vector Count: ${stats.vector_count || 'N/A'}<br>
+                    📐 Dimensions: ${stats.index_dimension || 'N/A'}<br>
+                    🕒 Last Updated: ${stats.last_updated ? new Date(stats.last_updated).toLocaleString() : 'N/A'}
+                `);
+            } else {
+                updateResults('searchResults', `❌ Failed to get search stats: ${result.data}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // Simple search
+        async function simpleSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                updateResults('searchResults', '⚠️ Please enter a search query', true);
+                return;
+            }
+
+            disableButtons(true);
+            updateResults('searchResults', '⏳ Performing simple search...');
+
+            const result = await client.simpleSearch(query);
+            
+            if (result.success) {
+                const data = result.data;
+                const results = data.results || [];
+                
+                if (results.length === 0) {
+                    updateResults('searchResults', 'ℹ️ No search results found');
+                } else {
+                    const resultList = results.map((result, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: #e8f4f8; border-radius: 4px; border-left: 3px solid #007bff;">
+                            <strong>Result ${index + 1}</strong><br>
+                            <strong>Score:</strong> ${result.score?.toFixed(4)}<br>
+                            <strong>File:</strong> ${result.filename || 'Unknown'}<br>
+                            <strong>Text:</strong> ${result.text?.substring(0, 200)}${result.text?.length > 200 ? '...' : ''}
+                        </div>
+                    `).join('');
+                    
+                    updateResults('searchResults', `
+                        ✅ <strong>Simple Search Results:</strong><br>
+                        📊 Query: "${data.query}"<br>
+                        🔢 Found: ${results.length} results<br>
+                        ${resultList}
+                    `);
+                }
+            } else {
+                updateResults('searchResults', `❌ Simple search failed: ${result.data}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // Advanced AI search
+        async function advancedSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                updateResults('searchResults', '⚠️ Please enter a search query', true);
+                return;
+            }
+
+            disableButtons(true);
+            updateResults('searchResults', '⏳ Processing with AI...');
+
+            const result = await client.advancedSearch(query, {
+                includeWeb: false,
+                rerank: false,
+                summarize: true
+            });
+            
+            if (result.success) {
+                const data = result.data;
+                const sources = data.sources || [];
+                
+                const sourceList = sources.slice(0, 3).map((source, index) => `
+                    <div style="margin: 5px 0; padding: 8px; background: #fff3cd; border-radius: 4px;">
+                        <strong>Source ${index + 1}:</strong> ${source.filename}<br>
+                        <strong>Score:</strong> ${source.score?.toFixed(4)}<br>
+                        <strong>Snippet:</strong> ${source.snippet?.substring(0, 150)}...
+                    </div>
+                `).join('');
+                
+                updateResults('searchResults', `
+                    ✅ <strong>AI Search Results:</strong><br>
+                    🤖 <strong>Answer:</strong><br>
+                    <div style="background: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                        ${data.answer?.substring(0, 500)}${data.answer?.length > 500 ? '...' : ''}
+                    </div>
+                    📊 <strong>Confidence:</strong> ${data.confidence}<br>
+                    📚 <strong>Sources:</strong> ${sources.length}<br>
+                    ⏱️ <strong>Processing Time:</strong> ${data.processing_time}s<br>
+                    ${sourceList}
+                `);
+            } else {
+                updateResults('searchResults', `❌ Advanced search failed: ${result.data}`, true);
+            }
+            
+            disableButtons(false);
+        }
+
+        // Run full demo
+        async function runFullDemo() {
+            disableButtons(true);
+            
+            updateResults('uploadResults', '⏳ Running full demo...');
+            updateResults('fileResults', '');
+            updateResults('searchResults', '');
+            
+            // Check health
+            await checkServerHealth();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // List existing files
+            await listFiles();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Get search stats
+            await getSearchStats();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Perform searches if we have files
+            if (client.currentFileId) {
+                await simpleSearch();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await advancedSearch();
+            }
+            
+            disableButtons(false);
+            updateResults('uploadResults', '✅ Full demo completed!');
+        }
+
+        // Clear all results
+        function clearAllResults() {
+            updateResults('uploadResults', '');
+            updateResults('fileResults', '');
+            updateResults('searchResults', '');
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            await checkServerHealth();
+            
+            // Auto-populate search query examples
+            const examples = [
+                "What are the key concepts of artificial intelligence?",
+                "Explain machine learning algorithms",
+                "What are the applications of AI in healthcare?",
+                "How does natural language processing work?",
+                "What is deep learning?"
+            ];
+            
+            // Rotate through examples every few seconds
+            let exampleIndex = 0;
+            setInterval(() => {
+                const queryInput = document.getElementById('searchQuery');
+                if (queryInput.value === examples[exampleIndex] || queryInput.value === '') {
+                    exampleIndex = (exampleIndex + 1) % examples.length;
+                    queryInput.placeholder = examples[exampleIndex];
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
