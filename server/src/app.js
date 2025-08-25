@@ -23,10 +23,10 @@ app.use(cookieParser());
 
 app.use("/api/users", userRoute);
 // Public subscription routes
-app.use("/api/subscription", subscriptionRouter);
 
 // app.use("/api/role",roleRouter)
 app.use(verifyJWT);
+app.use("/api/subscription", subscriptionRouter);
 app.use("/api/sections", chatRouter);
 app.use("/api/ai", promptRouter);
 

@@ -1,52 +1,52 @@
-// OAuthCallback.jsx
+// pages/oauth-callback.js or app/oauth-callback/page.js (depending on your Next.js version)
+"use client"
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 
-const OAuthCallback = () => {
-  const location = useLocation();
-
+export default function OAuthCallback() {
   useEffect(() => {
-    const hash = location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
+    // Extract access token from URL fragment
+    const fragment = window.location.hash.substring(1);
+    const params = new URLSearchParams(fragment);
+    const accessToken = params.get("access_token");
+    const error = params.get("error");
 
-      if (accessToken) {
-        // Send the token back to the opener window
-        window.opener.postMessage(
-          {
-            type: "GOOGLE_OAUTH_SUCCESS",
-            accessToken,
-          },
-          window.location.origin
-        );
-      } else {
+    if (error) {
+      // Send error to parent window
+      if (window.opener) {
         window.opener.postMessage(
           {
             type: "GOOGLE_OAUTH_ERROR",
-            error: "No access token found",
+            error: error,
           },
           window.location.origin
         );
       }
-    } else {
-      window.opener.postMessage(
-        {
-          type: "GOOGLE_OAUTH_ERROR",
-          error: "No authentication data found",
-        },
-        window.location.origin
-      );
+    } else if (accessToken) {
+      // Send success to parent window
+      if (window.opener) {
+        window.opener.postMessage(
+          {
+            type: "GOOGLE_OAUTH_SUCCESS",
+            accessToken: accessToken,
+          },
+          window.location.origin
+        );
+      }
     }
 
-    window.close();
-  }, [location]);
+    // Close the popup after a short delay
+    setTimeout(() => {
+      window.close();
+    }, 1000);
+  }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-gray-600">Processing authentication...</p>
+        <p className="text-sm text-gray-400 mt-2">You can close this window.</p>
+      </div>
     </div>
   );
-};
-
-export default OAuthCallback;
+}

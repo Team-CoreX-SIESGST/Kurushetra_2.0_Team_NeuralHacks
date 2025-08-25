@@ -7,7 +7,7 @@ import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputArea from "./InputArea";
 import { Menu } from "lucide-react";
-
+import { message_python } from "@/services/chat/chatServices";
 // FastAPI base URL and helpers
 const BASE_URL = "http://localhost:8000";
 const DEFAULT_WORKSPACE_ID = "demo";
@@ -181,7 +181,8 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			try {
 				uploadedFiles = await Promise.all(
 					selectedFiles.map(async (file) => {
-						const res = await apiUploadFile(file);
+						const res = await message_python(file);
+            console.log(res,"user")
 						return res; // contains file_id, filename, status, details
 					})
 				);

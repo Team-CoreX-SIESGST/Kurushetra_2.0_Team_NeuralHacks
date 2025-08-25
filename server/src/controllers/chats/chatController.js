@@ -2,10 +2,20 @@
 import { asyncHandler, sendResponse, statusType } from "../../utils/index.js";
 import Section from "../../models/section.js";
 import Chat from "../../models/chat.js";
+import User from "../../models/user.js";
+import TokenUsage from "../../models/tokenUsage.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import {sample_summary,researchPrompt} from "../../utils/sample.js"
+import { sample_summary, researchPrompt } from "../../utils/sample.js";
+
 // Initialize the Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Helper function to approximate token count (since Gemini doesn't provide exact token count)
+function approximateTokenCount(text) {
+    // Rough approximation: 1 token ≈ 4 characters for English text
+    // This is an estimate and may not be perfectly accurate
+    return Math.ceil(text.length / 4);
+}
 
 // Create a new chat section
 export const createSection = asyncHandler(async (req, res) => {
@@ -67,6 +77,17 @@ export const sendMessage = asyncHandler(async (req, res) => {
         return sendResponse(res, false, null, "Section not found", statusType.NOT_FOUND);
     }
 
+    // Get user to check token balance
+    const user = await User.findById(userId);
+    if (!user) {
+        return sendResponse(res, false, null, "User not found", statusType.NOT_FOUND);
+    }
+
+    // Check if user has an active subscription
+    if (user.subscriptionStatus !== "active") {
+        return sendResponse(res, false, null, "No active subscription", statusType.FORBIDDEN);
+    }
+
     // Get previous messages for context
     const previousChats = await Chat.find({ section: sectionId }).sort({ createdAt: 1 }).limit(10); // Limit context to last 10 messages
 
@@ -83,6 +104,20 @@ export const sendMessage = asyncHandler(async (req, res) => {
         isUser: true
     });
 
+    // Track token usage for user message
+    const userMessageTokens = approximateTokenCount(message.trim());
+    await TokenUsage.create({
+        user: userId,
+        tokens: userMessageTokens,
+        message: message.trim(),
+        isUserMessage: true,
+        section: sectionId
+    });
+
+    // Update user's token usage
+    user.tokensUsed += userMessageTokens;
+    await user.save();
+
     // Update section's updatedAt timestamp
     await Section.findByIdAndUpdate(sectionId, { updatedAt: new Date() });
 
@@ -96,12 +131,28 @@ export const sendMessage = asyncHandler(async (req, res) => {
         isUser: false
     });
 
+    // Track token usage for AI response
+    const aiMessageTokens = approximateTokenCount(aiResponse);
+    await TokenUsage.create({
+        user: userId,
+        tokens: aiMessageTokens,
+        message: aiResponse,
+        isUserMessage: false,
+        section: sectionId
+    });
+
+    // Update user's token usage with AI response tokens
+    user.tokensUsed += aiMessageTokens;
+    await user.save();
+
     return sendResponse(
         res,
         true,
         {
             userMessage: userChat,
-            aiMessage: aiChat
+            aiMessage: aiChat,
+            tokensUsed: userMessageTokens + aiMessageTokens,
+            totalTokensUsed: user.tokensUsed
         },
         "Message sent and response received",
         statusType.OK
@@ -121,6 +172,9 @@ export const deleteSection = asyncHandler(async (req, res) => {
 
     // Delete all chats in the section
     await Chat.deleteMany({ section: sectionId });
+
+    // Delete all token usage records for the section
+    await TokenUsage.deleteMany({ section: sectionId });
 
     // Delete the section
     await Section.findByIdAndDelete(sectionId);
@@ -158,7 +212,7 @@ async function getAIResponse(message, previousContext = [], processedFiles) {
         const prompt = researchPrompt
             .replace("{context_data}", JSON.stringify(processedFiles))
             .replace("{user_query}", message);
-        // console.log(prompt)
+
         let model;
         try {
             model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });

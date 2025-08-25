@@ -6,11 +6,165 @@ import TokenUsage from "../../models/tokenUsage.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { sendResponse, statusType } from "../../utils/index.js";
 import mongoose from "mongoose";
+import crypto from "crypto";
+import Razorpay from "razorpay";
+
+// Initialize Razorpay instance
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 // Get all available plans
 export const getPlans = asyncHandler(async (req, res) => {
     const plans = await Plan.find({ isActive: true }).sort({ price: 1 });
     return sendResponse(res, true, plans, "Plans fetched successfully", statusType.OK);
+});
+
+// Create Razorpay Order for subscription
+export const createSubscriptionOrder = asyncHandler(async (req, res) => {
+    const { planId } = req.body;
+    const userId = req.user._id;
+    console.log("Creating subscription order for user:", userId, "and plan:", planId);
+    if (!planId) {
+        return sendResponse(res, false, null, "Plan ID is required", statusType.BAD_REQUEST);
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+        return sendResponse(res, false, null, "Plan not found", statusType.NOT_FOUND);
+    }
+
+    // For free plan, subscribe directly
+    if (plan.price === 0) {
+        return subscribeToPlan(req, res);
+    }
+
+    const receipt = `sub_${Date.now()}_${userId.toString().slice(-8)}`;
+
+    const options = {
+        amount: plan.price * 100,
+        currency: "INR",
+        receipt: receipt, // Use the shorter receipt ID
+        payment_capture: 1
+    };
+
+    try {
+        const razorpayOrder = await razorpay.orders.create(options);
+
+        // Save razorpay order ID to user for verification later
+        // Store the receipt instead of the order ID for verification
+        await User.findByIdAndUpdate(userId, {
+            razorpayReceipt: receipt, // Store the receipt instead
+            pendingPlan: planId
+        });
+
+        return sendResponse(
+            res,
+            true,
+            {
+                id: razorpayOrder.id,
+                currency: razorpayOrder.currency,
+                amount: razorpayOrder.amount,
+                planId: plan._id
+            },
+            "Razorpay order created successfully",
+            statusType.OK
+        );
+    } catch (error) {
+        console.error("Razorpay order error:", error);
+        return sendResponse(
+            res,
+            false,
+            null,
+            "Failed to create Razorpay order",
+            statusType.INTERNAL_SERVER_ERROR
+        );
+    }
+});
+
+// Verify subscription payment
+export const verifySubscriptionPayment = asyncHandler(async (req, res) => {
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+    const userId = req.user._id;
+
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+        return sendResponse(
+            res,
+            false,
+            null,
+            "Payment verification failed - missing parameters",
+            statusType.BAD_REQUEST
+        );
+    }
+
+    // Verify payment signature
+    const generatedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest("hex");
+
+    if (generatedSignature !== razorpay_signature) {
+        return sendResponse(
+            res,
+            false,
+            null,
+            "Payment verification failed - invalid signature",
+            statusType.BAD_REQUEST
+        );
+    }
+
+    // Get user with pending plan
+    const user = await User.findById(userId);
+    if (!user) {
+        return sendResponse(res, false, null, "User not found", statusType.NOT_FOUND);
+    }
+
+    const planId = user.pendingPlan;
+    if (!planId) {
+        return sendResponse(
+            res,
+            false,
+            null,
+            "No pending subscription found",
+            statusType.BAD_REQUEST
+        );
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+        return sendResponse(res, false, null, "Plan not found", statusType.NOT_FOUND);
+    }
+
+    // Create subscription record
+    const subscription = await Subscription.create({
+        user: userId,
+        plan: planId,
+        status: "active",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        paymentId: razorpay_payment_id,
+        amount: plan.price
+    });
+
+    // Update user with new plan
+    await User.findByIdAndUpdate(userId, {
+        plan: planId,
+        tokensUsed: 0,
+        tokenResetDate: new Date(),
+        subscriptionStatus: "active",
+        subscriptionId: subscription._id,
+        razorpayOrderId: null,
+        pendingPlan: null
+    });
+
+    return sendResponse(
+        res,
+        true,
+        { plan, subscription },
+        "Payment verified and subscription activated successfully",
+        statusType.OK
+    );
 });
 
 // Get user's current subscription details
@@ -57,9 +211,9 @@ export const getCurrentSubscription = asyncHandler(async (req, res) => {
     );
 });
 
-// Subscribe to a plancheckTokenLimit
+// Subscribe to a plan (for free plans)
 export const subscribeToPlan = asyncHandler(async (req, res) => {
-    const { planId, paymentId } = req.body;
+    const { planId } = req.body;
     const userId = req.user._id;
 
     if (!planId) {
@@ -72,7 +226,7 @@ export const subscribeToPlan = asyncHandler(async (req, res) => {
     }
 
     // For free plan
-    if (plan.name === "Free" || plan.price === 0) {
+    if (plan.price === 0) {
         await User.findByIdAndUpdate(userId, {
             plan: planId,
             tokensUsed: 0,
@@ -89,31 +243,13 @@ export const subscribeToPlan = asyncHandler(async (req, res) => {
         );
     }
 
-    // For paid plans
-    const subscription = await Subscription.create({
-        user: userId,
-        plan: planId,
-        status: "active",
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        paymentId: paymentId || `demo_${Date.now()}`,
-        amount: plan.price
-    });
-
-    await User.findByIdAndUpdate(userId, {
-        plan: planId,
-        tokensUsed: 0,
-        tokenResetDate: new Date(),
-        subscriptionStatus: "active",
-        subscriptionId: subscription._id
-    });
-
+    // For paid plans, use the Razorpay flow
     return sendResponse(
         res,
-        true,
-        { plan, subscription },
-        "Successfully subscribed to plan",
-        statusType.OK
+        false,
+        null,
+        "Paid plans require payment processing",
+        statusType.BAD_REQUEST
     );
 });
 
@@ -178,7 +314,13 @@ export const getTokenUsageStats = asyncHandler(async (req, res) => {
 });
 
 // Track token usage for a request
-export const trackTokenUsage = async (userId, tokens, message, isUserMessage = true, sectionId = null) => {
+export const trackTokenUsage = async (
+    userId,
+    tokens,
+    message,
+    isUserMessage = true,
+    sectionId = null
+) => {
     try {
         // Create token usage record
         await TokenUsage.create({
@@ -204,7 +346,7 @@ export const trackTokenUsage = async (userId, tokens, message, isUserMessage = t
 // Check if user has enough tokens for a request
 export const checkTokenLimit = async (userId, requiredTokens) => {
     try {
-        const user = await User.findById(userId).populate('plan');
+        const user = await User.findById(userId).populate("plan");
         if (!user) {
             return { canProceed: false, reason: "User not found" };
         }
@@ -213,7 +355,7 @@ export const checkTokenLimit = async (userId, requiredTokens) => {
         const now = new Date();
         const resetDate = new Date(user.tokenResetDate);
         resetDate.setMonth(resetDate.getMonth() + 1);
-        
+
         if (now >= resetDate) {
             await User.findByIdAndUpdate(userId, {
                 tokensUsed: 0,
@@ -228,7 +370,7 @@ export const checkTokenLimit = async (userId, requiredTokens) => {
         }
 
         const tokensRemaining = user.plan.tokenLimit - user.tokensUsed;
-        
+
         if (tokensRemaining < requiredTokens) {
             return {
                 canProceed: false,

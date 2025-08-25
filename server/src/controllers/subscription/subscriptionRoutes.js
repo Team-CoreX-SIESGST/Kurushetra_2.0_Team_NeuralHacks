@@ -1,19 +1,22 @@
-import { Router } from "express";
+// routes/subscription.js
+import express from "express";
 import {
     getPlans,
     getCurrentSubscription,
     subscribeToPlan,
-    getTokenUsageStats
+    getTokenUsageStats,
+    createSubscriptionOrder,
+    verifySubscriptionPayment
 } from "./subscriptionController.js";
+// import { authenticate } from "../middleware/authMiddleware.js";
 
-const subscriptionRouter = Router();
+const router = express.Router();
 
-// Get all available plans (public route)
-subscriptionRouter.get("/plans", getPlans);
+router.get("/plans", getPlans);
+router.get("/current", getCurrentSubscription);
+router.post("/subscribe", subscribeToPlan);
+router.get("/token-usage", getTokenUsageStats);
+router.post("/create-order", createSubscriptionOrder);
+router.post("/verify-payment", verifySubscriptionPayment);
 
-// Protected routes (require authentication)
-subscriptionRouter.get("/current", getCurrentSubscription);
-subscriptionRouter.post("/subscribe", subscribeToPlan);
-subscriptionRouter.get("/usage-stats", getTokenUsageStats);
-
-export default subscriptionRouter;
+export default router;
