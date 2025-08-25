@@ -1,4 +1,4 @@
-import { apiClient } from "@/helper/commonHelper";
+import { apiClient, apiClient2 } from "@/helper/commonHelper";
 
 export const createSection = async (payload) => {
   const response = await apiClient.post("/sections",payload);
@@ -24,3 +24,15 @@ export const updateSectionTitle = (sectionId, payload) => {
 export const deleteSection = (sectionId) => {
   return apiClient.delete(`/sections/${sectionId}`);
 };
+
+export const python_pdf_to_text = (file) => {
+  const formData = new FormData();
+  formData.append("file", file); // name must match FastAPI param
+
+  return apiClient2.post("/process-file", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+

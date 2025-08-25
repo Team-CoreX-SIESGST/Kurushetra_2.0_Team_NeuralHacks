@@ -54,7 +54,7 @@ except ImportError:
 class FileProcessor:
     def __init__(self):
         self.supported_formats = {
-            '.pdf': self._process_pdf if PDF_AVAILABLE else None,
+            '.pdf': self._process_pdf,
             '.docx': self._process_docx if DOCX_AVAILABLE else None,
             '.doc': self._process_docx if DOCX_AVAILABLE else None,
             '.xlsx': self._process_excel if PANDAS_AVAILABLE else None,

@@ -54,7 +54,7 @@ export const getSection = asyncHandler(async (req, res) => {
 // Send a message to AI and get response
 export const sendMessage = asyncHandler(async (req, res) => {
     const { sectionId } = req.params;
-    const { message } = req.body;
+    const { message, processedFiles } = req.body;
     const userId = req.user._id;
 
     if (!message || message.trim() === "") {
@@ -87,7 +87,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     await Section.findByIdAndUpdate(sectionId, { updatedAt: new Date() });
 
     // Get AI response with context
-    const aiResponse = await getAIResponse(message, previousContext);
+    const aiResponse = await getAIResponse(message, previousContext, processedFiles);
 
     // Save AI response
     const aiChat = await Chat.create({
@@ -152,11 +152,11 @@ export const updateSectionTitle = asyncHandler(async (req, res) => {
     return sendResponse(res, true, section, "Section title updated successfully", statusType.OK);
 });
 
-async function getAIResponse(message, previousContext = []) {
+async function getAIResponse(message, previousContext = [], processedFiles) {
     try {
         // Try with the pro model first
         const prompt = researchPrompt
-            .replace("{context_data}", sample_summary)
+            .replace("{context_data}", JSON.stringify(processedFiles))
             .replace("{user_query}", message);
         // console.log(prompt)
         let model;
