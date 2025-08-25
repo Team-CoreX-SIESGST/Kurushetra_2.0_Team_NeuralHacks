@@ -1,5 +1,5 @@
 import ReactMarkdown from "react-markdown";
-import { User, Bot } from "lucide-react";
+import { User, Bot, Link as LinkIcon, FileText } from "lucide-react";
 
 export default function MessageBubble({ chat, formatTime }) {
   return (
@@ -34,6 +34,35 @@ export default function MessageBubble({ chat, formatTime }) {
           <p className="text-sm whitespace-pre-wrap leading-relaxed">
             <ReactMarkdown>{chat.message}</ReactMarkdown>
           </p>
+
+          {!chat.isUser && Array.isArray(chat.sources) && chat.sources.length > 0 && (
+            <div className="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+              <div className="text-xs font-semibold opacity-70 mb-1">Sources</div>
+              <ul className="space-y-1">
+                {chat.sources.slice(0, 5).map((src, idx) => (
+                  <li key={idx} className="text-xs flex items-start gap-2 opacity-80">
+                    <FileText className="w-3.5 h-3.5 mt-0.5" />
+                    <div>
+                      <div>
+                        {(src.filename || src.file_id || "Source")} {src.page ? `(p. ${src.page})` : ""}
+                      </div>
+                      {src.url ? (
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <LinkIcon className="w-3 h-3" /> Open link
+                        </a>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs opacity-60">
               {formatTime(chat.createdAt)}

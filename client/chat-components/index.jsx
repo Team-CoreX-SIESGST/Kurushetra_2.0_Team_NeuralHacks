@@ -7,6 +7,7 @@ import ChatHeader from "./ChatHeader";
 import MessagesArea from "./MessagesArea";
 import InputArea from "./InputArea";
 import { Menu } from "lucide-react";
+import { useToast } from "@/components/ui/ToastProvider";
 
 // FastAPI base URL and helpers
 const BASE_URL = "http://localhost:8000";
@@ -82,6 +83,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 	const [hoveredSection, setHoveredSection] = useState(null);
 	const [isListening, setIsListening] = useState(false);
 	const [selectedFiles, setSelectedFiles] = useState([]);
+	const { showToast } = useToast();
 
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
@@ -137,6 +139,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			setSections(saved);
 		} catch (error) {
 			console.error("Error loading sections:", error);
+			showToast("Failed to load chats", "error");
 		} finally {
 			setIsLoadingSections(false);
 		}
@@ -158,6 +161,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			setChats([]);
 		} catch (error) {
 			console.error("Error creating section:", error);
+			showToast("Failed to create chat", "error");
 		}
 	};
 
@@ -167,6 +171,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			// No server to fetch chat history from in FastAPI docs; keep current chats
 		} catch (error) {
 			console.error("Error loading section:", error);
+			showToast("Failed to open chat", "error");
 		}
 	};
 
@@ -187,6 +192,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 				);
 			} catch (error) {
 				console.error("Error uploading files:", error);
+				showToast("File upload failed. Ensure you're logged in.", "error");
 				return;
 			}
 		}
@@ -201,6 +207,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 				setSections((prev) => [sectionToUse, ...prev]);
 			} catch (error) {
 				console.error("Error creating section:", error);
+				showToast("Failed to create chat", "error");
 				return;
 			}
 		}
@@ -236,6 +243,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			setChats((prev) => [...prev, aiMessage]);
 		} catch (error) {
 			console.error("Error sending message:", error);
+			showToast("Search failed. Check your login and API server.", "error");
 		} finally {
 			setIsLoading(false);
 		}
@@ -263,6 +271,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			setCurrentSection((prev) => (prev && prev._id === editingSection ? { ...prev, title: editTitle } : prev));
 		} catch (error) {
 			console.error("Error updating title:", error);
+			showToast("Failed to update title", "error");
 		}
 		setEditingSection(null);
 		setEditTitle("");
@@ -278,6 +287,7 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
 			}
 		} catch (error) {
 			console.error("Error deleting section:", error);
+			showToast("Failed to delete chat", "error");
 		}
 	};
 
