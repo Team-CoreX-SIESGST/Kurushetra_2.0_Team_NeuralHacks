@@ -16,6 +16,7 @@ import MessagesArea from "./MessagesArea";
 import InputArea from "./InputArea";
 import { Menu, MoreHorizontal, Bot } from "lucide-react";
 import { processFile } from "@/utils/fileProcessors-browser";
+import { python_pdf_to_text } from "@/services/chat/chatServices";
 
 // Simplified client-side file handling without Node.js dependencies
 const processFileSimple = (file) => {
@@ -25,7 +26,7 @@ const processFileSimple = (file) => {
     size: file.size,
     lastModified: file.lastModified,
     // Let the server handle actual file processing
-    data: null
+    data: null,
   });
 };
 
@@ -141,8 +142,14 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
     if (selectedFiles.length > 0) {
       try {
         processedFiles = await Promise.all(
-          selectedFiles.map((file) => processFile(file))
+          selectedFiles.map(async (file) => {
+            const res = await python_pdf_to_text(file);
+            console.log(res.data);
+            return res.data.extracted_data.text_content; // only keep useful data
+          })
         );
+
+        console.log(processedFiles, "fiewjfio");
       } catch (error) {
         console.error("Error processing files:", error);
         return;
@@ -180,12 +187,12 @@ export function ChatInterface({ isSidebarOpen, setIsSidebarOpen }) {
     setIsLoading(true);
 
     // Send message with processed files
-    console.log(processedFiles,"feowifi")
+    console.log(processedFiles, "feowifi");
     // console.log(processedFiles,"feowifi")
     try {
       const response = await sendMessage(sectionToUse._id, {
         message: messageToSend,
-        files: processedFiles, // Send processed files to server
+        processedFiles: processedFiles, // Send processed files to server
       });
       setChats((prev) => [...prev, response.data.data.aiMessage]);
     } catch (error) {
