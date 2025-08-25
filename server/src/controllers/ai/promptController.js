@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ApiResponse } from "../../utils/apiResonse.js";
+import { sendResponse } from "../../utils/apiResonse.js";
 import { checkTokenLimit, trackTokenUsage } from "../subscription/subscriptionController.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
@@ -16,9 +16,7 @@ export const improvePrompt = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     if (!prompt || prompt.trim().length === 0) {
-        return res.status(400).json(
-            new ApiResponse(400, null, "Prompt is required")
-        );
+        return sendResponse(res, false, null, "Prompt is required", statusType.BAD_REQUEST);
     }
 
     // Estimate tokens for the request
@@ -29,13 +27,17 @@ export const improvePrompt = asyncHandler(async (req, res) => {
     // Check token limit
     const tokenCheck = await checkTokenLimit(userId, totalEstimatedTokens);
     if (!tokenCheck.canProceed) {
-        return res.status(429).json(
-            new ApiResponse(429, {
+        return sendResponse(
+            res,
+            false,
+            {
                 reason: tokenCheck.reason,
                 tokensRemaining: tokenCheck.tokensRemaining,
                 requiredTokens: tokenCheck.requiredTokens,
                 planName: tokenCheck.planName
-            }, "Token limit exceeded")
+            },
+            "Token limit exceeded",
+            statusType.FORBIDDEN
         );
     }
 
@@ -77,12 +79,16 @@ Improved prompt:`;
         // Track token usage
         await trackTokenUsage(userId, actualTotalTokens, prompt, true);
 
-        return res.status(200).json(
-            new ApiResponse(200, {
+        return sendResponse(
+            res,
+            true,
+            {
                 originalPrompt: prompt,
                 improvedPrompt: improvedPrompt,
                 tokensUsed: actualTotalTokens
-            }, "Prompt improved successfully")
+            },
+            "Prompt improved successfully",
+            statusType.OK
         );
 
     } catch (error) {
@@ -91,8 +97,12 @@ Improved prompt:`;
         // Track a minimal token usage for failed requests
         await trackTokenUsage(userId, estimatedInputTokens, prompt, true);
         
-        return res.status(500).json(
-            new ApiResponse(500, null, "Failed to improve prompt. Please try again.")
+        return sendResponse(
+            res,
+            false,
+            null,
+            "Failed to improve prompt. Please try again.",
+            statusType.INTERNAL_SERVER_ERROR
         );
     }
 });
@@ -102,9 +112,7 @@ export const suggestPromptStructure = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     if (!topic) {
-        return res.status(400).json(
-            new ApiResponse(400, null, "Topic is required")
-        );
+        return sendResponse(res, false, null, "Topic is required", statusType.BAD_REQUEST);
     }
 
     const inputText = `${topic} ${purpose || ''}`;
@@ -113,13 +121,17 @@ export const suggestPromptStructure = asyncHandler(async (req, res) => {
     // Check token limit
     const tokenCheck = await checkTokenLimit(userId, estimatedTokens);
     if (!tokenCheck.canProceed) {
-        return res.status(429).json(
-            new ApiResponse(429, {
+        return sendResponse(
+            res,
+            false,
+            {
                 reason: tokenCheck.reason,
                 tokensRemaining: tokenCheck.tokensRemaining,
                 requiredTokens: tokenCheck.requiredTokens,
                 planName: tokenCheck.planName
-            }, "Token limit exceeded")
+            },
+            "Token limit exceeded",
+            statusType.FORBIDDEN
         );
     }
 
@@ -145,13 +157,17 @@ Return only the prompt template, nothing else.`;
         const actualTokens = estimateTokens(systemPrompt) + estimateTokens(promptTemplate);
         await trackTokenUsage(userId, actualTokens, inputText, true);
 
-        return res.status(200).json(
-            new ApiResponse(200, {
+        return sendResponse(
+            res,
+            true,
+            {
                 topic,
                 purpose,
                 promptTemplate,
                 tokensUsed: actualTokens
-            }, "Prompt structure suggested successfully")
+            },
+            "Prompt structure suggested successfully",
+            statusType.OK
         );
 
     } catch (error) {
@@ -160,8 +176,12 @@ Return only the prompt template, nothing else.`;
         const fallbackTokens = estimateTokens(inputText);
         await trackTokenUsage(userId, fallbackTokens, inputText, true);
         
-        return res.status(500).json(
-            new ApiResponse(500, null, "Failed to suggest prompt structure. Please try again.")
+        return sendResponse(
+            res,
+            false,
+            null,
+            "Failed to suggest prompt structure. Please try again.",
+            statusType.INTERNAL_SERVER_ERROR
         );
     }
 });

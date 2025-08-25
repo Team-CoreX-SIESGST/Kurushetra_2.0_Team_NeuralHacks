@@ -1,38 +1,35 @@
+// controllers/subscriptionController.js
 import Plan from "../../models/plan.js";
 import User from "../../models/user.js";
 import Subscription from "../../models/subscription.js";
 import TokenUsage from "../../models/tokenUsage.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { sendResponse } from "../../utils/apiResonse.js";
+import { sendResponse, statusType } from "../../utils/index.js";
 import mongoose from "mongoose";
 
 // Get all available plans
 export const getPlans = asyncHandler(async (req, res) => {
     const plans = await Plan.find({ isActive: true }).sort({ price: 1 });
-    return res.status(200).json(
-        new sendResponse(200, plans, "Plans fetched successfully")
-    );
+    return sendResponse(res, true, plans, "Plans fetched successfully", statusType.OK);
 });
 
 // Get user's current subscription details
 export const getCurrentSubscription = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    
+
     const user = await User.findById(userId)
-        .populate('plan', 'name price tokenLimit features popular')
-        .select('plan tokensUsed tokenResetDate subscriptionStatus');
-    
+        .populate("plan", "name price tokenLimit features popular")
+        .select("plan tokensUsed tokenResetDate subscriptionStatus");
+
     if (!user) {
-        return res.status(404).json(
-            new sendResponse(404, null, "User not found")
-        );
+        return sendResponse(res, false, null, "User not found", statusType.NOT_FOUND);
     }
 
     // Check if token reset is due (monthly reset)
     const now = new Date();
     const resetDate = new Date(user.tokenResetDate);
     resetDate.setMonth(resetDate.getMonth() + 1);
-    
+
     if (now >= resetDate) {
         await User.findByIdAndUpdate(userId, {
             tokensUsed: 0,
@@ -47,33 +44,34 @@ export const getCurrentSubscription = asyncHandler(async (req, res) => {
         tokensUsed: user.tokensUsed,
         tokenResetDate: user.tokenResetDate,
         subscriptionStatus: user.subscriptionStatus,
-        tokensRemaining: user.plan.tokenLimit === -1 ? -1 : Math.max(0, user.plan.tokenLimit - user.tokensUsed)
+        tokensRemaining:
+            user.plan.tokenLimit === -1 ? -1 : Math.max(0, user.plan.tokenLimit - user.tokensUsed)
     };
 
-    return res.status(200).json(
-        new sendResponse(200, subscriptionData, "Subscription details fetched successfully")
+    return sendResponse(
+        res,
+        true,
+        subscriptionData,
+        "Subscription details fetched successfully",
+        statusType.OK
     );
 });
 
-// Subscribe to a plan (simplified version - in production you'd integrate with payment gateway)
+// Subscribe to a plancheckTokenLimit
 export const subscribeToPlan = asyncHandler(async (req, res) => {
     const { planId, paymentId } = req.body;
     const userId = req.user._id;
 
     if (!planId) {
-        return res.status(400).json(
-            new sendResponse(400, null, "Plan ID is required")
-        );
+        return sendResponse(res, false, null, "Plan ID is required", statusType.BAD_REQUEST);
     }
 
     const plan = await Plan.findById(planId);
     if (!plan) {
-        return res.status(404).json(
-            new sendResponse(404, null, "Plan not found")
-        );
+        return sendResponse(res, false, null, "Plan not found", statusType.NOT_FOUND);
     }
 
-    // For free plan, no payment required
+    // For free plan
     if (plan.name === "Free" || plan.price === 0) {
         await User.findByIdAndUpdate(userId, {
             plan: planId,
@@ -82,23 +80,22 @@ export const subscribeToPlan = asyncHandler(async (req, res) => {
             subscriptionStatus: "active"
         });
 
-        return res.status(200).json(
-            new sendResponse(200, { plan }, "Successfully subscribed to free plan")
+        return sendResponse(
+            res,
+            true,
+            { plan },
+            "Successfully subscribed to free plan",
+            statusType.OK
         );
     }
 
-    // For paid plans, you would typically:
-    // 1. Validate payment with payment gateway
-    // 2. Create subscription record
-    // 3. Update user's plan
-
-    // Simplified implementation for demo purposes
+    // For paid plans
     const subscription = await Subscription.create({
         user: userId,
         plan: planId,
         status: "active",
         startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         paymentId: paymentId || `demo_${Date.now()}`,
         amount: plan.price
     });
@@ -111,15 +108,19 @@ export const subscribeToPlan = asyncHandler(async (req, res) => {
         subscriptionId: subscription._id
     });
 
-    return res.status(200).json(
-        new sendResponse(200, { plan, subscription }, "Successfully subscribed to plan")
+    return sendResponse(
+        res,
+        true,
+        { plan, subscription },
+        "Successfully subscribed to plan",
+        statusType.OK
     );
 });
 
 // Get user's token usage statistics
 export const getTokenUsageStats = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const { period = "30" } = req.query; // Default to last 30 days
+    const { period = "30" } = req.query;
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
@@ -144,7 +145,7 @@ export const getTokenUsageStats = asyncHandler(async (req, res) => {
             }
         },
         {
-            $sort: { "_id": 1 }
+            $sort: { _id: 1 }
         }
     ]);
 
@@ -163,12 +164,16 @@ export const getTokenUsageStats = asyncHandler(async (req, res) => {
         }
     ]);
 
-    return res.status(200).json(
-        new sendResponse(200, {
+    return sendResponse(
+        res,
+        true,
+        {
             dailyUsage: tokenUsageStats,
             totalTokensInPeriod: totalTokensUsed[0]?.totalTokens || 0,
             period: parseInt(period)
-        }, "Token usage statistics fetched successfully")
+        },
+        "Token usage statistics fetched successfully",
+        statusType.OK
     );
 });
 
