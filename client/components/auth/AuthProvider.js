@@ -18,8 +18,9 @@ export function AuthProvider({ children }) {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
-    } catch {
-      localStorage.removeItem("user");
+    } catch(err) {
+      // localStorage.removeItem("user");
+      console.log(err)
     }
     checkAuth();
   }, []);
@@ -37,7 +38,7 @@ export function AuthProvider({ children }) {
         try {
           setUser(storedUser ? JSON.parse(storedUser) : null);
         } catch {
-          localStorage.removeItem("user");
+          // localStorage.removeItem("user");
           setUser(null);
         }
       }
@@ -51,7 +52,7 @@ export function AuthProvider({ children }) {
       const token = localStorage.getItem("token");
       if (!token) {
         setUser(null);
-        localStorage.removeItem("user");
+        // localStorage.removeItem("user");
         return;
       }
 
@@ -69,18 +70,18 @@ export function AuthProvider({ children }) {
           localStorage.setItem("user", JSON.stringify(userData));
         } else {
           // If response shape is unexpected, keep token-based auth but clear bad user
-          localStorage.removeItem("user");
+          // localStorage.removeItem("user");
           setUser(null);
         }
       } else {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        // localStorage.removeItem("token");
+        // localStorage.removeItem("user");
         setUser(null);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      // localStorage.removeItem("user");
       setUser(null);
     } finally {
       setLoading(false);
@@ -129,7 +130,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    // localStorage.removeItem("user");
     setUser(null);
     router.push("/login");
   };
