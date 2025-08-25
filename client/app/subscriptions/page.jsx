@@ -106,11 +106,17 @@ export default function PricingPage() {
 
           {/* Pricing Cards */}
           <motion.div
-            variants={FADE_IN_UP_VARIANTS}
+            variants={FADE_IN_STAGGER_VARIANTS} // Use stagger variants for the parent
+            initial="hidden"
+            animate="show"
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
           >
             {/* Hobby Plan */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl flex flex-col">
+            <motion.div
+              variants={FADE_IN_UP_VARIANTS} // Individual card animation
+              whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+              className="bg-slate-900 border border-slate-800 p-8 rounded-2xl flex flex-col"
+            >
               <div className="mb-6">
                 <h2 className="text-xl font-medium text-slate-400 mb-2">Hobby</h2>
                 <div className="text-5xl font-bold mb-1 text-slate-50">Free</div>
@@ -141,10 +147,14 @@ export default function PricingPage() {
                   Others
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Pro Plan */}
-            <div className="relative bg-slate-900 border-2 border-indigo-500 p-8 rounded-2xl flex flex-col shadow-2xl shadow-indigo-500/10">
+            <motion.div
+              variants={FADE_IN_UP_VARIANTS} // Individual card animation
+              whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+              className="relative bg-slate-900 border-2 border-indigo-500 p-8 rounded-2xl flex flex-col shadow-2xl shadow-indigo-500/10"
+            >
               <div className="absolute top-0 -translate-y-1/2 w-full left-0 flex justify-center">
                   <div className="bg-indigo-500 text-white text-xs font-semibold px-4 py-1 rounded-full">MOST POPULAR</div>
               </div>
@@ -159,16 +169,16 @@ export default function PricingPage() {
                 <h3 className="text-slate-300 mb-4">Everything in Hobby, plus</h3>
                 <ul className="space-y-3">
                     {[
-                        "Extended limits on Agent",
-                        "Unlimited Tab completions",
-                        "Access to Background Agents",
-                        "Access to Bugbot",
-                        "Access to maximum context windows"
+                      "Extended limits on Agent",
+                      "Unlimited Tab completions",
+                      "Access to Background Agents",
+                      "Access to Bugbot",
+                      "Access to maximum context windows"
                     ].map(feature => (
-                        <li className="flex items-center gap-3" key={feature}>
-                            <Check className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                            <span className="text-slate-300">{feature}</span>
-                        </li>
+                      <li className="flex items-center gap-3" key={feature}>
+                          <Check className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                          <span className="text-slate-300">{feature}</span>
+                      </li>
                     ))}
                 </ul>
               </div>
@@ -181,10 +191,14 @@ export default function PricingPage() {
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Ultra Plan */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl flex flex-col">
+            <motion.div
+              variants={FADE_IN_UP_VARIANTS} // Individual card animation
+              whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+              className="bg-slate-900 border border-slate-800 p-8 rounded-2xl flex flex-col"
+            >
               <div className="mb-6">
                 <h2 className="text-xl font-medium text-slate-400 mb-2">Ultra</h2>
                 <div className="flex items-baseline gap-2">
@@ -210,7 +224,7 @@ export default function PricingPage() {
                   Get Ultra
                 </button>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </main>
