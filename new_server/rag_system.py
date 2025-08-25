@@ -5,11 +5,13 @@ import aiohttp
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import hashlib
+from web_search import WebSearchEngine
 
 class RAGSystem:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+        self.web_search_engine = WebSearchEngine()
         
         if not self.api_key:
             print("Warning: GEMINI_API_KEY not found. Set it as environment variable or pass it to the constructor.")
@@ -79,6 +81,38 @@ class RAGSystem:
                 "error": f"Failed to generate summary: {str(e)}",
                 "fallback_summary": self._generate_fallback_summary(extracted_data)
             }
+    
+    async def generate_summary_with_urls(self, extracted_data: Dict[str, Any], include_urls: bool = True) -> Dict[str, Any]:
+        """Generate comprehensive summary with related web URLs"""
+        # First generate the standard summary
+        summary_result = await self.generate_summary(extracted_data)
+        
+        if not include_urls or "error" in summary_result:
+            return summary_result
+        
+        try:
+            # Get context for web search
+            context = self._prepare_context(extracted_data)
+            
+            # Find related web URLs
+            web_search_result = await self.web_search_engine.find_relevant_urls(
+                context, extracted_data, max_urls=10
+            )
+            
+            # Add web search results to the summary
+            summary_result["related_web_resources"] = web_search_result
+            
+            # Update metadata to indicate URLs were included
+            summary_result["metadata"]["includes_web_resources"] = True
+            summary_result["metadata"]["web_search_timestamp"] = web_search_result.get("search_metadata", {}).get("search_timestamp")
+            
+            return summary_result
+            
+        except Exception as e:
+            # If web search fails, return the original summary with error info
+            summary_result["web_search_error"] = f"Failed to fetch related URLs: {str(e)}"
+            summary_result["metadata"]["includes_web_resources"] = False
+            return summary_result
     
     def _prepare_context(self, extracted_data: Dict[str, Any]) -> str:
         """Prepare context string from extracted data"""

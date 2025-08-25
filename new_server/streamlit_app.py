@@ -80,8 +80,12 @@ def upload_and_process_tab():
                 process_file_only(uploaded_file)
         
         with col2:
-            if st.button("🤖 Process + AI Summary", use_container_width=True):
-                process_file_with_summary(uploaded_file)
+            if st.button("🤖 Process + AI Summary + URLs", use_container_width=True):
+                process_file_with_summary_and_urls(uploaded_file)
+        
+        # Add option for summary without URLs
+        if st.button("📝 Process + AI Summary Only", use_container_width=True):
+            process_file_with_summary(uploaded_file)
 
 def process_file_only(uploaded_file):
     """Process file and extract data to JSON"""
@@ -220,6 +224,140 @@ def process_file_with_summary(uploaded_file):
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
 
+def process_file_with_summary_and_urls(uploaded_file):
+    """Process file, generate AI summary, and find related web URLs"""
+    with st.spinner("🤖 Processing file, generating AI summary, and finding related URLs..."):
+        try:
+            files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+            response = requests.post(f"{API_BASE_URL}/process-and-summarize-with-urls", files=files)
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                st.success("✅ File processed, summarized, and related URLs found successfully!")
+                
+                # Show file info
+                file_info = result.get("file_info", {})
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("File Size", f"{file_info.get('file_size', 0)} bytes")
+                with col2:
+                    st.metric("Content Type", file_info.get('content_type', 'Unknown'))
+                with col3:
+                    st.metric("Status", result.get('status', 'Unknown'))
+                
+                # Show summaries and web resources
+                summary_data = result.get("summary", {})
+                
+                if "error" in summary_data:
+                    st.warning("⚠️ AI Summary unavailable - using fallback")
+                    fallback = summary_data.get("fallback_summary", {})
+                    st.json(fallback)
+                else:
+                    # Create tabs for summaries and web resources
+                    tab_names = []
+                    summaries = summary_data.get("summaries", {})
+                    
+                    if summaries:
+                        tab_names.extend(list(summaries.keys()))
+                    
+                    # Add web resources tab if available
+                    web_resources = summary_data.get("related_web_resources", {})
+                    if web_resources and web_resources.get("related_urls"):
+                        tab_names.append("🌐 Related URLs")
+                    
+                    if tab_names:
+                        tabs = st.tabs(tab_names)
+                        
+                        # Show summary tabs
+                        for i, (summary_type, summary_content) in enumerate(summaries.items()):
+                            with tabs[i]:
+                                st.markdown(f"**{summary_type.title()} Summary:**")
+                                st.write(summary_content)
+                        
+                        # Show web resources tab
+                        if web_resources and web_resources.get("related_urls"):
+                            with tabs[-1]:  # Last tab is web resources
+                                st.markdown("**🌐 Related Web Resources**")
+                                
+                                related_urls = web_resources.get("related_urls", [])
+                                
+                                if related_urls:
+                                    st.success(f"Found {len(related_urls)} relevant web resources")
+                                    
+                                    # Show search summary
+                                    search_summary = web_resources.get("search_summary", "")
+                                    if search_summary:
+                                        st.info(search_summary)
+                                    
+                                    # Display URLs in a nice format
+                                    for i, url_data in enumerate(related_urls, 1):
+                                        with st.container():
+                                            col1, col2 = st.columns([3, 1])
+                                            
+                                            with col1:
+                                                st.markdown(f"**{i}. [{url_data.get('title', 'Untitled')}]({url_data.get('url', '#')})**")
+                                                st.write(url_data.get('description', 'No description available')[:200] + "...")
+                                            
+                                            with col2:
+                                                st.write(f"**Source:** {url_data.get('source', 'Unknown')}")
+                                            
+                                            st.divider()
+                                    
+                                    # Show search metadata
+                                    search_metadata = web_resources.get("search_metadata", {})
+                                    if search_metadata:
+                                        with st.expander("🔍 Search Details"):
+                                            col1, col2 = st.columns(2)
+                                            with col1:
+                                                keywords = search_metadata.get("keywords_extracted", [])
+                                                if keywords:
+                                                    st.write(f"**Keywords:** {', '.join(keywords[:10])}")
+                                            with col2:
+                                                queries = search_metadata.get("queries_used", [])
+                                                if queries:
+                                                    st.write(f"**Search Queries:** {len(queries)} used")
+                                                    for query in queries[:3]:
+                                                        st.write(f"• _{query}_")
+                                
+                                else:
+                                    st.warning("⚠️ No related URLs found")
+                    
+                    # Show metadata
+                    metadata = summary_data.get("metadata", {})
+                    if metadata:
+                        st.subheader("📊 Processing Metadata")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Generated:** {metadata.get('generated_at', 'Unknown')}")
+                            st.write(f"**Source:** {metadata.get('source_file', 'Unknown')}")
+                            if metadata.get('includes_web_resources'):
+                                st.write("**Web Resources:** ✅ Included")
+                        with col2:
+                            stats = summary_data.get("content_stats", {})
+                            if stats:
+                                st.write(f"**Word Count:** {stats.get('word_count', 0)}")
+                                st.write(f"**Characters:** {stats.get('character_count', 0)}")
+                
+                # Show extracted data in expander
+                with st.expander("📋 View Extracted Data"):
+                    st.json(result.get("extracted_data", {}))
+                
+                # Download JSON button
+                json_str = json.dumps(result, indent=2, ensure_ascii=False)
+                st.download_button(
+                    label="💾 Download Complete JSON (with URLs)",
+                    data=json_str,
+                    file_name=f"processed_with_urls_{uploaded_file.name}.json",
+                    mime="application/json"
+                )
+                
+            else:
+                st.error(f"❌ Error processing file: {response.text}")
+                
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+
 def supported_formats_tab():
     """Show supported file formats"""
     st.header("📊 Supported File Formats")
@@ -263,15 +401,22 @@ def json_summarizer_tab():
         placeholder='{\n  "title": "Sample Document",\n  "content": "Your content here...",\n  "data": [{"key": "value"}]\n}'
     )
     
+    # Add option to include web URLs
+    include_urls = st.checkbox("🌐 Include related web URLs", value=True, help="Find and include relevant web resources")
+    
     if st.button("🤖 Generate Summary", use_container_width=True):
         if json_input.strip():
             try:
                 # Parse JSON
                 json_data = json.loads(json_input)
                 
-                with st.spinner("🤖 Generating AI summary..."):
+                # Choose endpoint based on whether URLs should be included
+                endpoint = "/summarize-json-with-urls" if include_urls else "/summarize-json"
+                spinner_text = "🤖 Generating AI summary and finding related URLs..." if include_urls else "🤖 Generating AI summary..."
+                
+                with st.spinner(spinner_text):
                     response = requests.post(
-                        f"{API_BASE_URL}/summarize-json",
+                        f"{API_BASE_URL}{endpoint}",
                         json=json_data
                     )
                     
