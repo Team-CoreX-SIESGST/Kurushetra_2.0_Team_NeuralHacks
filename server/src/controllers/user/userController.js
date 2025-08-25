@@ -32,10 +32,11 @@ const generateRefreshToken = (user) => {
     );
 };
 
+const isProd = process.env.NODE_ENV === "production";
 const cookieOptions = {
-    httpOnly: false,
-    secure: true,
-    sameSite: "Strict"
+    httpOnly: true,
+    secure: isProd ? true : false,
+    sameSite: isProd ? "None" : "Lax",
 };
 
 // Helper function to get and assign free plan
@@ -103,7 +104,7 @@ export const createUser = asyncHandler(async (req, res) => {
             delete userData.password;
 
             res.cookie("accessToken", accessToken, cookieOptions);
-            res.cookie("refreshToken", refreshToken, cookieOptions);
+            res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
             return sendResponse(
                 res,

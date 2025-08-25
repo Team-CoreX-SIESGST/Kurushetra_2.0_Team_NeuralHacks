@@ -11,7 +11,7 @@ const app = express();
 
 app.use(
     cors({
-        origin: ["http://localhost:3000"],
+        origin: ["http://localhost:3000", "http://localhost:3001", process.env.FRONTEND_URL].filter(Boolean),
         credentials: true
     })
 );
@@ -34,10 +34,11 @@ app.use("/api/ai", promptRouter);
 app.get("/oauth2callback", (req, res) => {
     // This endpoint should redirect to the frontend callback page with the token
     const token = req.query.access_token;
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
     if (token) {
-        res.redirect(`${process.env.FRONTEND_URL}/oauth-callback#access_token=${token}`);
+        res.redirect(`${frontendUrl}/oauth-callback#access_token=${token}`);
     } else {
-        res.redirect(`${process.env.FRONTEND_URL}/oauth-callback#error=auth_failed`);
+        res.redirect(`${frontendUrl}/oauth-callback#error=auth_failed`);
     }
 });
 
