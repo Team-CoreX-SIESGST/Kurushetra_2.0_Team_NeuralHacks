@@ -1,0 +1,38 @@
+This is a sample text document for testing the file processing system.
+
+Key Features to Test:
+1. Text extraction and processing
+2. JSON conversion functionality  
+3. AI-powered summarization using Gemini API
+4. Multiple file format support
+
+Technical Specifications:
+- The system supports over 11 different file formats
+- Uses FastAPI for backend services
+- Integrates with Google's Gemini API for advanced summarization
+- Provides both basic data extraction and AI-enhanced summaries
+
+Sample Data for Testing:
+Name: Sample Document
+Type: Text File
+Purpose: Demonstration and Testing
+Author: File Processing System
+Date: 2024-01-15
+
+Content Categories:
+- Introduction and Overview
+- Technical Documentation
+- Feature Descriptions
+- Testing Guidelines
+- Sample Data Examples
+
+This document can be used to test the text processing capabilities of the system. It should be extracted properly and converted to JSON format, with the option to generate AI summaries using the integrated RAG system.
+
+The system should recognize this as a text file and extract:
+- Full content
+- Word count
+- Character count
+- Line count
+- File metadata
+
+This serves as a baseline test case for the file processing pipeline.

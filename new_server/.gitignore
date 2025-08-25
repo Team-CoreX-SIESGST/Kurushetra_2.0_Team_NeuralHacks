@@ -235,19 +235,35 @@ tmp/
 cache/
 .cache/
 
-# Output files
-*.json
-*.csv
-*.xlsx
-*.pdf
-*.docx
-*.txt
-*.html
-*.xml
+# Generated output files (ignore processed files but allow sample/test files)
+extracted_data/*.json
+processed_data/*.json
+output/*.json
+temp_*.json
+result_*.json
+
+# Allow sample and test documents in the repository
+# But ignore generated/processed files
+!sample_files/
+!test_files/
+!docs/
+!examples/
+!demo_files/
+
+# Ignore specific generated files but allow source documents
+temp_*.*
+processed_*.*
+generated_*.*
+extracted_*.*
+summary_*.*
+
+# Always keep important files
 !requirements.txt
 !README.md
 !setup.py
 !test_*.py
+!example_*.py
+!sample_*.py
 
 # Temporary files
 *.tmp

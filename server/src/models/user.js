@@ -36,11 +36,11 @@ const userSchema = new mongoose.Schema(
             sparse: true
         },
         // New subscription fields
-        plan: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Plan",
-            required: true
-        },
+        // plan: {
+        //     type: mongoose.Schema.Types.ObjectId,
+        //     ref: "Plan",
+        //     required: true
+        // },
         tokensUsed: {
             type: Number,
             default: 0
